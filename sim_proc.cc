@@ -48,7 +48,7 @@ int main (int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    superScalar superScalar(params.rob_size, params.iq_size, params.width);
+    superScalar superScalar(params.rob_size, params.iq_size, params.width, FP);
     
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     //
@@ -60,8 +60,35 @@ int main (int argc, char* argv[])
     //
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    while(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF)
-        printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2); //Print to check if inputs have been read correctly
+    // while(fscanf(FP, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) != EOF) {
+    //     printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2); //Print to check if inputs have been read correctly
+
+    do {
+
+        // superScalar.Retire();
+        // superScalar.Writeback();
+        // superScalar.Execute();
+        // superScalar.Issue();
+        superScalar.Dispatch();
+        superScalar.RegisterRead();
+        superScalar.Rename();
+        superScalar.Decode();
+        superScalar.Fetch();
+
+    }
+    while(superScalar.Advance_Cycle());
+
+    printf("# === Simulator Command =========\n");
+    printf("# ./sim %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4]);
+    printf("# === Processor Configuration ===\n");
+    printf("# ROB_SIZE = %s\n",argv[1]);
+    printf("# IQ_SIZE  = %s\n",argv[2]);
+    printf("# WIDTH    = %s\n",argv[3]);
+    printf("# === Simulation Results ========\n");
+    printf("# Dynamic Instruction Count    = %d\n",superScalar.currentInstructionCycle);
+    printf("# Cycles                       = %d\n",superScalar.cycleCount);
+
+    printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCycle)/((float)superScalar.cycleCount));
 
     return 0;
 }
