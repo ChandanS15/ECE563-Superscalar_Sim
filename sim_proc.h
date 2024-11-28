@@ -18,7 +18,7 @@ typedef struct proc_params{
 // Put additional data structures here as per your requirement
 
 
-typedef struct instructionStageCycleCounter {
+typedef struct instructionStageCycleCounterDS {
 
     uint32_t fetchCycleCount;
     uint32_t decodeCycleCount;
@@ -30,10 +30,10 @@ typedef struct instructionStageCycleCounter {
     uint32_t writeBackCycleCount;
     uint32_t retireCycleCount;
 
-}instructionStageCycleCounter;
+}instructionStageCycleCounterDS;
 
 
-typedef struct instructionBundle {
+typedef struct instructionBundleDS {
 
     uint8_t validBit;
     uint32_t programCounter;
@@ -43,80 +43,80 @@ typedef struct instructionBundle {
     int32_t sourceRegister2;
 
     int32_t currentRank;
-}instructionBundle;
+}instructionBundleDS;
 
-typedef struct decodePipelineDS {
+typedef struct decodePipeline {
 
     // instruction Bundle has the original Instruction
-    instructionBundle instructionBundle;
-}decodePipelineDS;
+    instructionBundleDS instructionBundle;
+}decodePipeline;
 
-typedef struct issueQueueDS {
+typedef struct issueQueue {
 
-    instructionBundle instructionBundle;
+    instructionBundleDS instructionBundle;
     int32_t destinationRegister;
     int32_t  sourceRegister1;
     int32_t  sourceRegister2;
 
-}issueQueueDS;
+}issueQueue;
 
-typedef struct renamePipelineDS {
+typedef struct renamePipeline {
 
     // In the rename pipeline regs the renamed and original values are stored.
-    instructionBundle instructionBundle;
+    instructionBundleDS instructionBundle;
 
     // The below registers are used to store renamed contents
     int32_t destinationRegister;
     int32_t sourceRegister1;
     int32_t sourceRegister2;
-}renamePipelineDS;
+}renamePipeline;
 
-typedef struct registerReadPipelineDS {
+typedef struct registerReadPipeline {
 
     // In the register Read pipeline regs the renamed and original values are stored.
-    instructionBundle instructionBundle;
+    instructionBundleDS instructionBundle;
 
     // The below registers are used to store renamed contents
     int32_t destinationRegister;
     int32_t sourceRegister1;
     int32_t sourceRegister2;
-}registerReadPipelineDS;
+}registerReadPipeline;
 
-typedef struct dispatchPipelineDS {
+typedef struct dispatchPipeline {
 
     // In the register Read pipeline regs the renamed and original values are stored.
-    instructionBundle instructionBundle;
+    instructionBundleDS instructionBundle;
 
     // The below registers are used to store renamed contents
     int32_t destinationRegister;
     int32_t sourceRegister1;
     int32_t sourceRegister2;
-}dispatchPipelineDS;
+}dispatchPipeline;
 
-typedef struct writeBackPipelineDS {
+typedef struct writeBackPipeline {
 
     // In the write Back  pipeline regs the renamed and original values are stored.
-    instructionBundle instructionBundle;
+    instructionBundleDS instructionBundle;
 
     // The below registers are used to store renamed contents
     int32_t destinationRegister;
     int32_t sourceRegister1;
     int32_t sourceRegister2;
-}writeBackPipelineDS;
+}writeBackPipeline;
 
-typedef struct executePipelineDS {
+typedef struct executePipeline {
 
     // In the register Read pipeline regs the renamed and original values are stored.
-    instructionBundle instructionBundle;
+    instructionBundleDS instructionBundle;
 
     // The below registers are used to store renamed contents
     int32_t destinationRegister;
     int32_t sourceRegister1;
     int32_t sourceRegister2;
     uint32_t waitCycles;
-}executePipelineDS;
+}executePipeline;
 
-typedef struct reorderBuffer {
+typedef struct reorderBufferDS {
     //int32_t index;
 
     int32_t validBit;   // Check for vlaidity of the instruction
@@ -128,12 +128,12 @@ typedef struct reorderBuffer {
     int32_t readyBit;   //
     uint32_t programCounter;
     int32_t currentIndex; // Store current index of this current ROB entry
-}reorderBuffer;
+}reorderBufferDS;
 
-typedef struct renameMapTable {
+typedef struct renameMapTableDS {
     uint32_t validBit;
     int32_t robTag;
-}renameMapTable;
+}renameMapTableDS;
 
 
 
@@ -143,20 +143,20 @@ class superScalar {
 public :
     vector<uint32_t> architecturalRegisterFile;
 
-    vector<renameMapTable> renameMapTable;
-    vector<reorderBuffer> reorderBuffer;
-    vector<issueQueueDS> issueQueueDS;
+    vector<renameMapTableDS> renameMapTable;
+    vector<reorderBufferDS> reorderBuffer;
+    vector<issueQueue> issueQueueDS;
 
 
-    vector<decodePipelineDS> decodePipelineDS;
-    vector<renamePipelineDS> renamePipelineDS;
-    vector<registerReadPipelineDS> registerReadPipelineDS;
-    vector<dispatchPipelineDS> dispatchPipelineDS;
-    vector<executePipelineDS> executePipelineDS;
-    vector<writeBackPipelineDS> writeBackPipelineDS;
+    vector<decodePipeline> decodePipelineDS;
+    vector<renamePipeline> renamePipelineDS;
+    vector<registerReadPipeline> registerReadPipelineDS;
+    vector<dispatchPipeline> dispatchPipelineDS;
+    vector<executePipeline> executePipelineDS;
+    vector<writeBackPipeline> writeBackPipelineDS;
 
 
-    vector<instructionStageCycleCounter> instructionStageCycleCounter;
+    vector<instructionStageCycleCounterDS> instructionStageCycleCounter;
 
 
     uint32_t headPointer;
@@ -528,7 +528,7 @@ inline void superScalar::Issue() {
 
     // In the issue queue I should be issuing upto WIDTH oldest instructions from the issueQuquq.
     // In order to achieve this I will be using the rank that was given to each instruction while fetching from the trace file
-::issueQueueDS temp;
+::issueQueue temp;
 
 
     if(checkIS()) {
