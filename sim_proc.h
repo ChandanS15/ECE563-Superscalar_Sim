@@ -364,7 +364,7 @@ inline void superScalar::Retire() {
 
 inline void superScalar::Writeback() {
 
-    for(int i = 0; i < width * 5; i++) {
+    for(uint32_t i = 0; i < width * 5; i++) {
 
         if(writeBackPipelineDS[i].instructionBundle.validBit == 1) {
 
@@ -412,7 +412,7 @@ inline void superScalar::Writeback() {
 
 inline void superScalar::Execute() {
 
-    for(int i = 0; i < width * 5; i++) {
+    for(uint32_t i = 0; i < width * 5; i++) {
 
         if(executePipelineDS[i].instructionBundle.validBit == 1) {
 
@@ -515,7 +515,7 @@ inline void superScalar::Execute() {
 
 inline void superScalar::Issue() {
 
-    for(int i = 0; i < iqSize; i++) {
+    for(uint32_t i = 0; i < iqSize; i++) {
 
         if(issueQueueDS[i].instructionBundle.validBit == 1) {
 
@@ -616,7 +616,7 @@ inline void superScalar::Issue() {
 
 inline void superScalar::Dispatch() {
 
-    for(int i = 0; i < width; i++) {
+    for(uint32_t i = 0; i < width; i++) {
         if(dispatchPipelineDS[i].instructionBundle.validBit == 1) {
 
             instructionStageCycleCounter[dispatchPipelineDS[i].instructionBundle.currentRank].dispatchCycleCount++;
@@ -675,7 +675,7 @@ inline void superScalar::Dispatch() {
 
 inline void superScalar::RegisterRead() {
 
-    for(int i = 0; i < width; i++) {
+    for(uint32_t i = 0; i < width; i++) {
         if(registerReadPipelineDS[i].instructionBundle.validBit == 1) {
 
             instructionStageCycleCounter[registerReadPipelineDS[i].instructionBundle.currentRank].registerReadCycleCount++;
@@ -740,7 +740,7 @@ inline void superScalar::RegisterRead() {
 }
 inline void superScalar::Rename() {
 
-    for(int i = 0; i < width; i++) {
+    for(uint32_t i = 0; i < width; i++) {
         if(renamePipelineDS[i].instructionBundle.validBit == 1) {
 
             instructionStageCycleCounter[renamePipelineDS[i].instructionBundle.currentRank].renameCycleCount++;
@@ -873,7 +873,7 @@ inline void superScalar::Rename() {
 inline void superScalar::Decode() {
 
 
-    for(int i = 0; i < width; i++) {
+    for(uint32_t i = 0; i < width; i++) {
         if(decodePipelineDS[i].instructionBundle.validBit == 1) {
 
             instructionStageCycleCounter[decodePipelineDS[i].instructionBundle.currentRank].decodeCycleCount++;
@@ -914,7 +914,7 @@ void superScalar::Fetch() {
     // Check if fetch criteria is met
 
     if(checkFE()) {
-        for(int i =0; i < width; i++) {
+        for(uint32_t i =0; i < width; i++) {
 
             if( (fscanf(filePointer, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2)) != EOF) {
 
@@ -968,7 +968,7 @@ inline uint32_t superScalar::checkRE() {
 
 inline uint32_t superScalar::checkWB() {
 
-    uint32_t writeBackCounter = 0;
+
     for(uint32_t i=0; i< width*5; i++) {
 
         if(writeBackPipelineDS[i].instructionBundle.validBit == 1)
@@ -993,7 +993,7 @@ inline uint32_t superScalar::checkEX() {
 
 inline uint32_t superScalar::checkIS() {
 
-    uint32_t issueQueueCounter = 0;
+
 
     for(uint32_t i=0; i< iqSize; i++) {
 
