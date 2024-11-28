@@ -22,15 +22,15 @@ int main (int argc, char* argv[])
     FILE *FP;               // File handler
     char *trace_file;       // Variable that holds trace file name;
     proc_params params;       // look at sim_bp.h header file for the the definition of struct proc_params
-    int op_type, dest, src1, src2;  // Variables are read from trace file
-    uint64_t pc; // Variable holds the pc read from input file
-    
+   // int op_type, dest, src1, src2;  // Variables are read from trace file
+    //uint64_t pc; // Variable holds the pc read from input file
+
     if (argc != 5)
     {
         printf("Error: Wrong number of inputs:%d\n", argc-1);
         exit(EXIT_FAILURE);
     }
-    
+
     params.rob_size     = strtoul(argv[1], NULL, 10);
     params.iq_size      = strtoul(argv[2], NULL, 10);
     params.width        = strtoul(argv[3], NULL, 10);
@@ -49,7 +49,7 @@ int main (int argc, char* argv[])
     }
 
     superScalar superScalar(params.rob_size, params.iq_size, params.width, FP);
-    
+
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     //
     // The following loop just tests reading the trace and echoing it back to the screen.
@@ -65,10 +65,10 @@ int main (int argc, char* argv[])
 
     do {
 
-        // superScalar.Retire();
-        // superScalar.Writeback();
-        // superScalar.Execute();
-        // superScalar.Issue();
+        superScalar.Retire();
+        superScalar.Writeback();
+        superScalar.Execute();
+        superScalar.Issue();
         superScalar.Dispatch();
         superScalar.RegisterRead();
         superScalar.Rename();
@@ -85,10 +85,15 @@ int main (int argc, char* argv[])
     printf("# IQ_SIZE  = %s\n",argv[2]);
     printf("# WIDTH    = %s\n",argv[3]);
     printf("# === Simulation Results ========\n");
-    printf("# Dynamic Instruction Count    = %d\n",superScalar.currentInstructionCycle);
+
+    // Total number of retired instructions or the number of instructions fetched form the trace file or
+    // total number of instructions executed by the 9 stagees of pipeline.
+    printf("# Dynamic Instruction Count    = %d\n",superScalar.currentInstructionCount);
+
+    // Total number of cycles to retire all the instructions fetched
     printf("# Cycles                       = %d\n",superScalar.cycleCount);
 
-    printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCycle)/((float)superScalar.cycleCount));
+    printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
 
     return 0;
 }
