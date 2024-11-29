@@ -143,7 +143,7 @@ typedef struct renameMapTableDS {
 class superScalar {
 public:
     std::vector<uint32_t> architecturalRegisterFile;
-    //std::vector<renameMapTableDS> renameMapTable;
+    std::vector<renameMapTableDS> renameMapTable;
     // renameMapTableDS [];
     std::vector<reorderBufferDS> reorderBuffer;
     std::vector<issueQueue> issueQueueDS;
@@ -163,7 +163,6 @@ public:
     uint32_t currentInstructionCount;
     uint32_t cycleCount;
     bool advanceCyleEnable;
-    renameMapTableDS renameMapTable[NUMBER_OF_REGISTERS];
 
     int op_type, dest, src1, src2;
     uint64_t pc;
@@ -172,7 +171,7 @@ public:
 
     superScalar(int32_t robSize, uint32_t iqSize, uint32_t width, FILE* filePointer)
         : architecturalRegisterFile(NUMBER_OF_REGISTERS),
-          //renameMapTable(NUMBER_OF_REGISTERS),
+          renameMapTable(NUMBER_OF_REGISTERS),
           reorderBuffer(robSize),
           issueQueueDS(iqSize),
           decodePipelineDS(width),
@@ -191,7 +190,6 @@ public:
           iqSize(iqSize),
           width(width)
     {
-
         if (filePointer == nullptr) {
             std::cerr << "Error: File pointer is null." << std::endl;
             exit(EXIT_FAILURE);
@@ -208,11 +206,11 @@ public:
         }
 
 
-        // std::cout << "superScalar destructor called" << std::endl;
-        // // Check for invalid memory before vector destruction
-        // for (auto& entry : renameMapTable) {
-        //     std::cout << "Renaming entry address: " << &entry << std::endl;
-        // }
+        std::cout << "superScalar destructor called" << std::endl;
+        // Check for invalid memory before vector destruction
+        for (auto& entry : renameMapTable) {
+            std::cout << "Renaming entry address: " << &entry << std::endl;
+        }
         // If you have a custom cleanup logic, check here as well
     }
 
