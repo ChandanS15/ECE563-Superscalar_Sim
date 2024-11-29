@@ -99,12 +99,6 @@ int main (int argc, char* argv[])
 
     cout<<"# Instructions Per Cycle (IPC) = "<<((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount) << endl;
 
-    if(ferror(FP)) {
-        printf("Error");
-    }
-
-    if(feof(FP)) {
-        printf("Error");
-    }
+    fclose(FP);
     return 0;
 }
