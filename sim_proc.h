@@ -143,8 +143,8 @@ typedef struct renameMapTableDS {
 class superScalar {
 public:
     std::vector<uint32_t> architecturalRegisterFile;
-    std::vector<renameMapTableDS> renameMapTable;
-    // renameMapTableDS [];
+    //std::vector<renameMapTableDS> renameMapTable;
+    renameMapTableDS renameMapTable [67];
     std::vector<reorderBufferDS> reorderBuffer;
     std::vector<issueQueue> issueQueueDS;
     std::vector<decodePipeline> decodePipelineDS;
@@ -171,7 +171,7 @@ public:
 
     superScalar(int32_t robSize, uint32_t iqSize, uint32_t width, FILE* filePointer)
         : architecturalRegisterFile(NUMBER_OF_REGISTERS),
-          renameMapTable(NUMBER_OF_REGISTERS),
+          //renameMapTable(NUMBER_OF_REGISTERS),
           reorderBuffer(robSize),
           issueQueueDS(iqSize),
           decodePipelineDS(width),
