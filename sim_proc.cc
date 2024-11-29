@@ -100,5 +100,5 @@ int main (int argc, char* argv[])
     cout<<"# Instructions Per Cycle (IPC) = "<<((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount) << endl;
 
     //fclose(FP);
-    return 0;
+    exit(0);
 }
