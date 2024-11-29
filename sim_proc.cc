@@ -97,7 +97,7 @@ int main (int argc, char* argv[])
 
     //printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
 
-    printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
+    printf("# Instructions Per Cycle (IPC) = %f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
 
     //fclose(FP);
     exit(0);
