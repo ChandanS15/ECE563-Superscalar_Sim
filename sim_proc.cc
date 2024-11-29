@@ -4,6 +4,8 @@
 #include <cinttypes>
 #include "sim_proc.h"
 
+#include <fstream>
+
 /*  argc holds the number of command line arguments
     argv[] holds the commands themselves
 
@@ -41,6 +43,8 @@ int main (int argc, char* argv[])
             "tracefile:%s\n", params.rob_size, params.iq_size, params.width, trace_file);
     // Open trace_file in read mode
     FP = fopen(trace_file, "r");
+
+
     if(FP == NULL)
     {
         // Throw error and exit if fopen() failed
@@ -88,11 +92,19 @@ int main (int argc, char* argv[])
 
     // Total number of retired instructions or the number of instructions fetched form the trace file or
     // total number of instructions executed by the 9 stagees of pipeline.
-    printf("# Dynamic Instruction Count    = %d\n",superScalar.currentInstructionCount);
+    cout<<"# Dynamic Instruction Count    = "<<superScalar.currentInstructionCount<<endl;
 
     // Total number of cycles to retire all the instructions fetched
-    printf("# Cycles                       = %d\n",superScalar.cycleCount);
+    cout<<"# Cycles                       = "<<superScalar.cycleCount<<endl;
 
-    printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
+    cout<<"# Instructions Per Cycle (IPC) = "<<((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount) << endl;
+
+    if(ferror(FP)) {
+        printf("Error");
+    }
+
+    if(feof(FP)) {
+        printf("Error");
+    }
     return 0;
 }

@@ -208,10 +208,10 @@ public :
         InitialisePipelineDS();
 }
 
-    ~superScalar() {
-
-        fclose(filePointer);
-    }
+    // ~superScalar() {
+    //
+    //     fclose(filePointer);
+    //}
 
     void InitialisePipelineDS();
 
@@ -293,12 +293,6 @@ inline int32_t superScalar::Advance_Cycle() {
             if(reorderBuffer[i].validBit == 1)
                 return 1;
         }
-
-
-
-
-
-
         // If none of the above conditions match i.e every instruction fetched from the trace file has been retired, then simulation is done.
         return 0;
     }
@@ -944,7 +938,7 @@ void superScalar::Fetch() {
     if(checkFE()) {
         for(uint32_t i =0; i < width; i++) {
 
-            if( (fscanf(filePointer, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2)) != EOF) {
+            if( (fscanf(filePointer, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2)) == 5) {
 
                 // Set the valid bit of the instruction being advanced to the decode stage
                 decodePipelineDS[i].instructionBundle.validBit = 1;
@@ -971,8 +965,7 @@ void superScalar::Fetch() {
                 return;
             }
         }
-    } return;
-
+    }
 }
 
 
