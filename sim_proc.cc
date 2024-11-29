@@ -99,7 +99,7 @@ int main (int argc, char* argv[])
 
     printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
 
-    fclose(FP);
+    //fclose(FP);
     //exit(1);
     return 0;
 }
