@@ -159,8 +159,8 @@ public :
     vector<instructionStageCycleCounterDS> instructionStageCycleCounter;
 
 
-    uint32_t headPointer;
-    uint32_t tailPointer;
+    int32_t headPointer;
+    int32_t tailPointer;
 
     uint32_t robSize;
     uint32_t iqSize;
@@ -168,6 +168,7 @@ public :
 
     uint32_t currentInstructionCount;
     uint32_t cycleCount;
+    bool advanceCyleEnable;
 
 
     int op_type, dest, src1, src2;  // Variables are read from trace file
@@ -176,7 +177,7 @@ public :
 
     FILE *filePointer;
 
-    superScalar(uint32_t robSize, uint32_t iqSize, uint32_t width, FILE *filePointer) {
+    superScalar(int32_t robSize, uint32_t iqSize, uint32_t width, FILE *filePointer) {
         // Architectural register and rename Map Table must be of same size i.e 67
         architecturalRegisterFile.resize(NUMBER_OF_REGISTERS);
         renameMapTable.resize(NUMBER_OF_REGISTERS);
@@ -196,6 +197,7 @@ public :
 
         currentInstructionCount = 0;
         cycleCount = 0;
+        advanceCyleEnable = true;
 
         this->filePointer = filePointer;
 
@@ -204,11 +206,12 @@ public :
         this->width = width;
 
         InitialisePipelineDS();
-
-
-
-
 }
+
+    ~superScalar() {
+
+        fclose(filePointer);
+    }
 
     void InitialisePipelineDS();
 
@@ -252,14 +255,18 @@ inline int32_t superScalar::Advance_Cycle() {
 
     // cycle count to retire all the instructions that enter the pipeline
     cycleCount++;
+    size_t bytesRead;
 
     if(feof(filePointer)) {
+
+    //if(advanceCyleEnable ) {
 
         // After fetching the last instruction from the trace file
 
         // check if there are valid instructions in the pipeline
         for(uint32_t i=0; i< width; i++) {
-            if(dispatchPipelineDS[i].instructionBundle.validBit == 1 || renamePipelineDS[i].instructionBundle.validBit == 1 || registerReadPipelineDS[i].instructionBundle.validBit == 1)
+            if(dispatchPipelineDS[i].instructionBundle.validBit == 1 || renamePipelineDS[i].instructionBundle.validBit == 1 || registerReadPipelineDS[i].instructionBundle.validBit == 1 ||
+                decodePipelineDS[i].instructionBundle.validBit == 1)
                 return 1;
         }
 
@@ -301,7 +308,7 @@ inline int32_t superScalar::Advance_Cycle() {
 
 inline void superScalar::Retire() {
 
-    for(int i = 0; i < robSize; i++) {
+    for(uint32_t i = 0; i < robSize; i++) {
 
         if(reorderBuffer[i].validBit == 1 && reorderBuffer[i].readyBit == 1) {
 
@@ -483,7 +490,7 @@ inline void superScalar::Execute() {
 
                     }
 
-                    for(int j =0; j <width*5; j++) {
+                    for(uint32_t j =0; j <width*5; j++) {
                         if(writeBackPipelineDS[j].instructionBundle.validBit == 0) {
 
                             // In the writeBack List if the valid bit is 0, advance the executed instruction to writeback
@@ -528,42 +535,63 @@ inline void superScalar::Issue() {
 
     // In the issue queue I should be issuing upto WIDTH oldest instructions from the issueQuquq.
     // In order to achieve this I will be using the rank that was given to each instruction while fetching from the trace file
-::issueQueue temp;
+
 
 
     if(checkIS()) {
 
         // sorting the instructions in the Issue Queue based on their rank.
 
-        for(uint32_t i=0; i< iqSize - 1; i++) {
+        // for(uint32_t i=0; i< iqSize - 1; i++) {
+        //
+        //     for(uint32_t j=i+1;j<iqSize; j++) {
+        //
+        //         if(issueQueueDS[i].instructionBundle.validBit < issueQueueDS[j].instructionBundle.validBit) {
+        //             temp = issueQueueDS[i];
+        //             issueQueueDS[i] = issueQueueDS[j];
+        //             issueQueueDS[j] = temp;
+        //         }
+        //
+        //     }
+        //
+        // }
+        //
+        // for(uint32_t i=0; i< iqSize - 1; i++) {
+        //
+        //     for(uint32_t j=i+1; j<iqSize; j++) {
+        //
+        //         if( (issueQueueDS[i].instructionBundle.validBit == 1) && (issueQueueDS[j].instructionBundle.validBit == 1) &&
+        //             (issueQueueDS[i].instructionBundle.currentRank > issueQueueDS[j].instructionBundle.currentRank) &&
+        //             issueQueueDS[j].instructionBundle.currentRank != -1) {
+        //
+        //             temp = issueQueueDS[i];
+        //             issueQueueDS[i] = issueQueueDS[j];
+        //             issueQueueDS[j] = temp;
+        //             }
+        //     }
+        //
+        // }
 
-            for(uint32_t j=i+1;j<iqSize; j++) {
-
-                if(issueQueueDS[i].instructionBundle.validBit < issueQueueDS[j].instructionBundle.validBit) {
-                    temp = issueQueueDS[i];
-                    issueQueueDS[i] = issueQueueDS[j];
-                    issueQueueDS[j] = temp;
+        for (uint32_t i = 0; i < iqSize - 1; i++) {
+            for (uint32_t j = i + 1; j < iqSize; j++) {
+                if (issueQueueDS[i].instructionBundle.validBit < issueQueueDS[j].instructionBundle.validBit) {
+                    std::swap(issueQueueDS[i], issueQueueDS[j]);
                 }
-
             }
-
         }
 
-        for(uint32_t i=0; i< iqSize - 1; i++) {
-
-            for(uint32_t j=i+1; j<iqSize; j++) {
-
-                if( (issueQueueDS[i].instructionBundle.validBit == 1) && (issueQueueDS[j].instructionBundle.validBit == 1) &&
+        for (uint32_t i = 0; i < iqSize - 1; i++) {
+            for (uint32_t j = i + 1; j < iqSize; j++) {
+                if ((issueQueueDS[i].instructionBundle.validBit == 1) &&
+                    (issueQueueDS[j].instructionBundle.validBit == 1) &&
                     (issueQueueDS[i].instructionBundle.currentRank > issueQueueDS[j].instructionBundle.currentRank) &&
-                    issueQueueDS[j].instructionBundle.currentRank != -1) {
+                    (issueQueueDS[j].instructionBundle.currentRank != -1)) {
 
-                    temp = issueQueueDS[i];
-                    issueQueueDS[i] = issueQueueDS[j];
-                    issueQueueDS[j] = temp;
+                    std::swap(issueQueueDS[i], issueQueueDS[j]);
                     }
             }
-
         }
+
 
 
 
@@ -748,7 +776,7 @@ inline void superScalar::Rename() {
         }
     }
 
-    bool checkRMTDestOrSource = false;
+
 
     // Check if ROB tailPointer != robSize and  RR pipeline is empty
     if(checkRN()) {
@@ -883,7 +911,7 @@ inline void superScalar::Decode() {
 
 
     if(checkDE()) {
-        for(int i = 0; i < width; i++) {
+        for(uint32_t i = 0; i < width; i++) {
             if(decodePipelineDS[i].instructionBundle.validBit == 1) {
 
                 // Advance the stage by moving the instruction bundles to next stage.
@@ -938,8 +966,10 @@ void superScalar::Fetch() {
                 instructionStageCycleCounter.insert((instructionStageCycleCounter.begin() + currentInstructionCount), {cycleCount,cycleCount,0,0,0,0,0,0,0});
 
                 currentInstructionCount++;
-            } else
+            } else {
+                advanceCyleEnable = false;
                 return;
+            }
         }
     } return;
 

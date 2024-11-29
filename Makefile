@@ -22,7 +22,7 @@ all: sim
 # rule for making sim
 
 sim: $(SIM_OBJ)
-	$(CC) -o sim $(CFLAGS) $(SIM_OBJ) -lm
+	$(CC) -g -o sim $(CFLAGS) $(SIM_OBJ) -lm
 	@echo "-----------DONE WITH sim-----------"
 
 

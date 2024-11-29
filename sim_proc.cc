@@ -1,7 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <inttypes.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cinttypes>
 #include "sim_proc.h"
 
 /*  argc holds the number of command line arguments
@@ -64,7 +64,6 @@ int main (int argc, char* argv[])
     //     printf("%lx %d %d %d %d\n", pc, op_type, dest, src1, src2); //Print to check if inputs have been read correctly
 
     do {
-
         superScalar.Retire();
         superScalar.Writeback();
         superScalar.Execute();
@@ -74,12 +73,13 @@ int main (int argc, char* argv[])
         superScalar.Rename();
         superScalar.Decode();
         superScalar.Fetch();
-
     }
     while(superScalar.Advance_Cycle());
 
+
+
     printf("# === Simulator Command =========\n");
-    printf("# ./sim %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4]);
+    printf("# ./sim %d %d %d %s\n",params.rob_size, params.iq_size, params.width, trace_file);
     printf("# === Processor Configuration ===\n");
     printf("# ROB_SIZE = %s\n",argv[1]);
     printf("# IQ_SIZE  = %s\n",argv[2]);
@@ -94,6 +94,5 @@ int main (int argc, char* argv[])
     printf("# Cycles                       = %d\n",superScalar.cycleCount);
 
     printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
-
     return 0;
 }
