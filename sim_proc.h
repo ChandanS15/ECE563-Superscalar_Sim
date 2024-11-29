@@ -206,11 +206,11 @@ public:
         }
 
 
-        std::cout << "superScalar destructor called" << std::endl;
-        // Check for invalid memory before vector destruction
-        for (auto& entry : renameMapTable) {
-            std::cout << "Renaming entry address: " << &entry << std::endl;
-        }
+        // std::cout << "superScalar destructor called" << std::endl;
+        // // Check for invalid memory before vector destruction
+        // for (auto& entry : renameMapTable) {
+        //     std::cout << "Renaming entry address: " << &entry << std::endl;
+        // }
         // If you have a custom cleanup logic, check here as well
     }
 
