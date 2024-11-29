@@ -131,91 +131,92 @@ typedef struct reorderBufferDS {
 }reorderBufferDS;
 
 typedef struct renameMapTableDS {
+
     uint32_t validBit;
     int32_t robTag;
+
 }renameMapTableDS;
 
 
 
 
 class superScalar {
-
-public :
-    vector<uint32_t> architecturalRegisterFile;
-
-    vector<renameMapTableDS> renameMapTable;
-    vector<reorderBufferDS> reorderBuffer;
-    vector<issueQueue> issueQueueDS;
-
-
-    vector<decodePipeline> decodePipelineDS;
-    vector<renamePipeline> renamePipelineDS;
-    vector<registerReadPipeline> registerReadPipelineDS;
-    vector<dispatchPipeline> dispatchPipelineDS;
-    vector<executePipeline> executePipelineDS;
-    vector<writeBackPipeline> writeBackPipelineDS;
-
-
-    vector<instructionStageCycleCounterDS> instructionStageCycleCounter;
-
+public:
+    std::vector<uint32_t> architecturalRegisterFile;
+    //std::vector<renameMapTableDS> renameMapTable;
+    // renameMapTableDS [];
+    std::vector<reorderBufferDS> reorderBuffer;
+    std::vector<issueQueue> issueQueueDS;
+    std::vector<decodePipeline> decodePipelineDS;
+    std::vector<renamePipeline> renamePipelineDS;
+    std::vector<registerReadPipeline> registerReadPipelineDS;
+    std::vector<dispatchPipeline> dispatchPipelineDS;
+    std::vector<executePipeline> executePipelineDS;
+    std::vector<writeBackPipeline> writeBackPipelineDS;
+    std::vector<instructionStageCycleCounterDS> instructionStageCycleCounter;
 
     int32_t headPointer;
     int32_t tailPointer;
-
     uint32_t robSize;
     uint32_t iqSize;
     uint32_t width;
-
     uint32_t currentInstructionCount;
     uint32_t cycleCount;
     bool advanceCyleEnable;
+    renameMapTableDS renameMapTable[NUMBER_OF_REGISTERS];
 
+    int op_type, dest, src1, src2;
+    uint64_t pc;
 
-    int op_type, dest, src1, src2;  // Variables are read from trace file
-    uint64_t pc; // Variable holds the pc read from input file
+    FILE* filePointer;
 
+    superScalar(int32_t robSize, uint32_t iqSize, uint32_t width, FILE* filePointer)
+        : architecturalRegisterFile(NUMBER_OF_REGISTERS),
+          //renameMapTable(NUMBER_OF_REGISTERS),
+          reorderBuffer(robSize),
+          issueQueueDS(iqSize),
+          decodePipelineDS(width),
+          renamePipelineDS(width),
+          registerReadPipelineDS(width),
+          dispatchPipelineDS(width),
+          executePipelineDS(width * 5),
+          writeBackPipelineDS(width * 5),
+          headPointer(0),
+          tailPointer(0),
+          currentInstructionCount(0),
+          cycleCount(0),
+          advanceCyleEnable(true),
+          filePointer(filePointer),
+          robSize(robSize),
+          iqSize(iqSize),
+          width(width)
+    {
 
-    FILE *filePointer;
-
-    superScalar(int32_t robSize, uint32_t iqSize, uint32_t width, FILE *filePointer) {
-        // Architectural register and rename Map Table must be of same size i.e 67
-        architecturalRegisterFile.resize(NUMBER_OF_REGISTERS);
-        renameMapTable.resize(NUMBER_OF_REGISTERS);
-        reorderBuffer.resize(robSize);
-        issueQueueDS.resize(iqSize);
-
-        decodePipelineDS.resize(width);
-        renamePipelineDS.resize(width);
-        registerReadPipelineDS.resize(width);
-        dispatchPipelineDS.resize(width);
-
-        executePipelineDS.resize(width*5);
-        writeBackPipelineDS.resize(width*5);
-
-        headPointer = 0;    // Points to the oldest instruction in ROB
-        tailPointer = 0;    // points to the youngest instruction in ROB
-
-        currentInstructionCount = 0;
-        cycleCount = 0;
-        advanceCyleEnable = true;
-
-        this->filePointer = filePointer;
-
-        this->robSize = robSize;
-        this->iqSize = iqSize;
-        this->width = width;
-
-        InitialisePipelineDS();
-}
-
-     ~superScalar() {
-    //
-    //     fclose(filePointer);
-        if (filePointer != nullptr) {
-            fclose(this->filePointer);
-            filePointer = NULL;
+        if (filePointer == nullptr) {
+            std::cerr << "Error: File pointer is null." << std::endl;
+            exit(EXIT_FAILURE);
         }
+        InitialisePipelineDS();
     }
+
+
+
+    ~superScalar() {
+
+        if (filePointer) {
+            fclose(filePointer);
+        }
+
+
+        // std::cout << "superScalar destructor called" << std::endl;
+        // // Check for invalid memory before vector destruction
+        // for (auto& entry : renameMapTable) {
+        //     std::cout << "Renaming entry address: " << &entry << std::endl;
+        // }
+        // If you have a custom cleanup logic, check here as well
+    }
+
+
 
     void InitialisePipelineDS();
 
@@ -1224,7 +1225,6 @@ void superScalar::InitialisePipelineDS() {
 
     for(uint32_t i = 0; i < NUMBER_OF_REGISTERS; i++) {
 
-        architecturalRegisterFile[i] = 0;
         renameMapTable[i].validBit = 0;
         renameMapTable[i].robTag = -1;
 
