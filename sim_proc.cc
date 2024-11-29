@@ -92,16 +92,15 @@ int main (int argc, char* argv[])
 
     // Total number of retired instructions or the number of instructions fetched form the trace file or
     // total number of instructions executed by the 9 stagees of pipeline.
-    cout<<"# Dynamic Instruction Count    = "<<superScalar.currentInstructionCount<<endl;
-
-    // Total number of cycles to retire all the instructions fetched
-    cout<<"# Cycles                       = "<<superScalar.cycleCount<<endl;
+    // cout<<"# Dynamic Instruction Count    = "<<superScalar.currentInstructionCount<<endl;
+    //
+    // // Total number of cycles to retire all the instructions fetched
+    // cout<<"# Cycles                       = "<<superScalar.cycleCount<<endl;
 
     //printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
-
+    printf("# === Simulation Results ========\n");
+    printf("# Dynamic Instruction Count    = %d\n",superScalar.currentInstructionCount);
+    printf("# Cycles                       = %d\n",superScalar.cycleCount);
     printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
-
-    //fclose(FP);
-    //exit(1);
     return 0;
 }
