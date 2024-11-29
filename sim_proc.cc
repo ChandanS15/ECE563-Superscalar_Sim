@@ -1,11 +1,8 @@
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <cinttypes>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
 #include "sim_proc.h"
-
-#include <fstream>
-#include <iomanip>
 
 /*  argc holds the number of command line arguments
     argv[] holds the commands themselves
