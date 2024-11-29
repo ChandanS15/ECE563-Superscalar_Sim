@@ -81,7 +81,7 @@ int main (int argc, char* argv[])
 
 
     printf("# === Simulator Command =========\n");
-    printf("# ./sim %d %d %d %s\n",params.rob_size, params.iq_size, params.width, trace_file);
+    printf("# ./sim %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4]);
     printf("# === Processor Configuration ===\n");
     printf("# ROB_SIZE = %s\n",argv[1]);
     printf("# IQ_SIZE  = %s\n",argv[2]);
@@ -94,6 +94,8 @@ int main (int argc, char* argv[])
 
     // Total number of cycles to retire all the instructions fetched
     cout<<"# Cycles                       = "<<superScalar.cycleCount<<endl;
+
+    //printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
 
     printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
 
