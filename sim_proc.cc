@@ -35,10 +35,10 @@ int main (int argc, char* argv[])
     params.iq_size      = strtoul(argv[2], NULL, 10);
     params.width        = strtoul(argv[3], NULL, 10);
     trace_file          = argv[4];
-    printf("rob_size:%lu "
-            "iq_size:%lu "
-            "width:%lu "
-            "tracefile:%s\n", params.rob_size, params.iq_size, params.width, trace_file);
+    // printf("rob_size:%lu "
+    //         "iq_size:%lu "
+    //         "width:%lu "
+    //         "tracefile:%s\n", params.rob_size, params.iq_size, params.width, trace_file);
     // Open trace_file in read mode
     FP = fopen(trace_file, "r");
 
@@ -98,7 +98,7 @@ int main (int argc, char* argv[])
     // cout<<"# Cycles                       = "<<superScalar.cycleCount<<endl;
 
     //printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
-    printf("# === Simulation Results ========\n");
+   // printf("# === Simulation Results ========\n");
     printf("# Dynamic Instruction Count    = %d\n",superScalar.currentInstructionCount);
     printf("# Cycles                       = %d\n",superScalar.cycleCount);
     printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
