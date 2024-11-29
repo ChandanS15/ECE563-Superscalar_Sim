@@ -5,6 +5,7 @@
 #include "sim_proc.h"
 
 #include <fstream>
+#include <iomanip>
 
 /*  argc holds the number of command line arguments
     argv[] holds the commands themselves
@@ -97,7 +98,7 @@ int main (int argc, char* argv[])
     // Total number of cycles to retire all the instructions fetched
     cout<<"# Cycles                       = "<<superScalar.cycleCount<<endl;
 
-    cout<<"# Instructions Per Cycle (IPC) = "<<((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount) << endl;
+    cout<<"# Instructions Per Cycle (IPC) = "<<std::setprecision(2)<<((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount) << endl;
 
     //fclose(FP);
     exit(0);
