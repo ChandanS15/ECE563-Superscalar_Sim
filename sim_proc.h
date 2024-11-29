@@ -168,51 +168,9 @@ public:
     uint64_t pc;
 
     FILE* filePointer;
-
-    superScalar(int32_t robSize, uint32_t iqSize, uint32_t width, FILE* filePointer)
-        : architecturalRegisterFile(NUMBER_OF_REGISTERS),
-          //renameMapTable(NUMBER_OF_REGISTERS),
-          reorderBuffer(robSize),
-          issueQueueDS(iqSize),
-          decodePipelineDS(width),
-          renamePipelineDS(width),
-          registerReadPipelineDS(width),
-          dispatchPipelineDS(width),
-          executePipelineDS(width * 5),
-          writeBackPipelineDS(width * 5),
-          headPointer(0),
-          tailPointer(0),
-          currentInstructionCount(0),
-          cycleCount(0),
-          advanceCyleEnable(true),
-          filePointer(filePointer),
-          robSize(robSize),
-          iqSize(iqSize),
-          width(width)
-    {
-        if (filePointer == nullptr) {
-            std::cerr << "Error: File pointer is null." << std::endl;
-            exit(EXIT_FAILURE);
-        }
-        InitialisePipelineDS();
-    }
+    void superScalarInitialise(int32_t robSize, uint32_t iqSize, uint32_t width, FILE *filePointer);
 
 
-
-    // ~superScalar() {
-    //
-    //     if (filePointer) {
-    //         fclose(filePointer);
-    //     }
-    //
-    //
-    //     // std::cout << "superScalar destructor called" << std::endl;
-    //     // // Check for invalid memory before vector destruction
-    //     // for (auto& entry : renameMapTable) {
-    //     //     std::cout << "Renaming entry address: " << &entry << std::endl;
-    //     // }
-    //     // If you have a custom cleanup logic, check here as well
-    // }
 
 
 
@@ -253,6 +211,38 @@ public:
     int32_t Advance_Cycle();
 
 };
+
+inline void superScalar::superScalarInitialise(int32_t robSize, uint32_t iqSize, uint32_t width, FILE* filePointer) {
+
+
+    //renameMapTable(NUMBER_OF_REGISTERS),
+    reorderBuffer.resize( robSize);
+    issueQueueDS.resize(iqSize);
+    decodePipelineDS.resize(width);
+    renamePipelineDS.resize(width);
+    registerReadPipelineDS.resize(width);
+    dispatchPipelineDS.resize(width);
+    executePipelineDS.resize(width * 5);
+    writeBackPipelineDS.resize(width * 5);
+    headPointer = 0;
+    tailPointer=(0);
+    currentInstructionCount=(0);
+    cycleCount=(0);
+    this->filePointer=(filePointer);
+    this->robSize=(robSize);
+    this->iqSize=(iqSize);
+    this->width=width;
+
+    if (filePointer == nullptr) {
+        std::cerr << "Error: File pointer is null." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    InitialisePipelineDS();
+
+}
+
+
+
 
 inline int32_t superScalar::Advance_Cycle() {
 

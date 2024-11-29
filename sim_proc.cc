@@ -50,7 +50,9 @@ int main (int argc, char* argv[])
         exit(EXIT_FAILURE);
     }
 
-    superScalar superScalar(params.rob_size, params.iq_size, params.width, FP);
+    superScalar superScalar;
+
+    superScalar.superScalarInitialise(params.rob_size, params.iq_size, params.width, FP);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////////////
     //
