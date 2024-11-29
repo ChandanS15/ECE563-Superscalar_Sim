@@ -208,10 +208,14 @@ public :
         InitialisePipelineDS();
 }
 
-    // ~superScalar() {
+     ~superScalar() {
     //
     //     fclose(filePointer);
-    //}
+        if (filePointer != nullptr) {
+            fclose(this->filePointer);
+            filePointer = NULL;
+        }
+    }
 
     void InitialisePipelineDS();
 
