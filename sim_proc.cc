@@ -98,7 +98,7 @@ int main (int argc, char* argv[])
     // Total number of cycles to retire all the instructions fetched
     cout<<"# Cycles                       = "<<superScalar.cycleCount<<endl;
 
-    cout<<"# Instructions Per Cycle (IPC) = "<< std::fixed<<std::setprecision(6)<<((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount) << endl;
+    printf("# Instructions Per Cycle (IPC) = %.2f\n",((float)superScalar.currentInstructionCount)/((float)superScalar.cycleCount));
 
     //fclose(FP);
     exit(0);
