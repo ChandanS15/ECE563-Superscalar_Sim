@@ -360,15 +360,6 @@ inline void superScalar::Retire() {
 
 inline void superScalar::Writeback() {
 
-    // for(uint32_t i = 0; i < width * 5; i++) {
-    //
-    //     if(writeBackPipelineDS[i].instructionBundle.validBit == 1) {
-    //
-    //         instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].writeBackCycleCount++;
-    //         instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].retireCycleCount = instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].writeBackCycleCount;
-    //     }
-    // }
-
     for(auto iterator = writeBackPipelineDS.begin(); iterator != writeBackPipelineDS.end(); iterator++) {
 
         if(iterator->instructionBundle.validBit == 1) {
@@ -418,16 +409,17 @@ inline void superScalar::Writeback() {
 
 inline void superScalar::Execute() {
 
-    for(uint32_t i = 0; i < width * 5; i++) {
 
-        if(executePipelineDS[i].instructionBundle.validBit == 1) {
+    for(auto iterator = executePipelineDS.begin(); iterator != executePipelineDS.end(); iterator++) {
 
-            instructionStageCycleCounter[executePipelineDS[i].instructionBundle.currentRank].executeCycleCount++;
-            instructionStageCycleCounter[executePipelineDS[i].instructionBundle.currentRank].writeBackCycleCount = instructionStageCycleCounter[executePipelineDS[i].instructionBundle.currentRank].executeCycleCount;;
+        if(iterator->instructionBundle.validBit == 1) {
 
-
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].executeCycleCount++;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].writeBackCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].executeCycleCount;
         }
     }
+
+
 
     if(checkEX()) {
         for(uint32_t i=0; i< width*5; i++) {
@@ -521,12 +513,12 @@ inline void superScalar::Execute() {
 
 inline void superScalar::Issue() {
 
-    for(uint32_t i = 0; i < iqSize; i++) {
+    for(auto iterator = issueQueueDS.begin(); iterator != issueQueueDS.end(); iterator++) {
 
-        if(issueQueueDS[i].instructionBundle.validBit == 1) {
+        if(iterator->instructionBundle.validBit == 1) {
 
-            instructionStageCycleCounter[issueQueueDS[i].instructionBundle.currentRank].issueCycleCount++;
-            instructionStageCycleCounter[issueQueueDS[i].instructionBundle.currentRank].executeCycleCount = instructionStageCycleCounter[issueQueueDS[i].instructionBundle.currentRank].issueCycleCount;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].issueCycleCount++;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].executeCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].issueCycleCount;
         }
     }
 
@@ -607,11 +599,13 @@ inline void superScalar::Issue() {
 
 inline void superScalar::Dispatch() {
 
-    for(uint32_t i = 0; i < width; i++) {
-        if(dispatchPipelineDS[i].instructionBundle.validBit == 1) {
 
-            instructionStageCycleCounter[dispatchPipelineDS[i].instructionBundle.currentRank].dispatchCycleCount++;
-            instructionStageCycleCounter[dispatchPipelineDS[i].instructionBundle.currentRank].issueCycleCount = instructionStageCycleCounter[dispatchPipelineDS[i].instructionBundle.currentRank].dispatchCycleCount;
+    for(auto iterator = dispatchPipelineDS.begin(); iterator != dispatchPipelineDS.end(); iterator++) {
+
+        if(iterator->instructionBundle.validBit == 1) {
+
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].dispatchCycleCount++;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].issueCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].dispatchCycleCount;
         }
     }
 
@@ -666,11 +660,12 @@ inline void superScalar::Dispatch() {
 
 inline void superScalar::RegisterRead() {
 
-    for(uint32_t i = 0; i < width; i++) {
-        if(registerReadPipelineDS[i].instructionBundle.validBit == 1) {
+    for(auto iterator = registerReadPipelineDS.begin(); iterator != registerReadPipelineDS.end(); iterator++) {
 
-            instructionStageCycleCounter[registerReadPipelineDS[i].instructionBundle.currentRank].registerReadCycleCount++;
-            instructionStageCycleCounter[registerReadPipelineDS[i].instructionBundle.currentRank].dispatchCycleCount = instructionStageCycleCounter[registerReadPipelineDS[i].instructionBundle.currentRank].registerReadCycleCount;
+        if(iterator->instructionBundle.validBit == 1) {
+
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].registerReadCycleCount++;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].dispatchCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].registerReadCycleCount;
         }
     }
 
@@ -731,11 +726,12 @@ inline void superScalar::RegisterRead() {
 }
 inline void superScalar::Rename() {
 
-    for(uint32_t i = 0; i < width; i++) {
-        if(renamePipelineDS[i].instructionBundle.validBit == 1) {
+    for(auto iterator = renamePipelineDS.begin(); iterator != renamePipelineDS.end(); iterator++) {
 
-            instructionStageCycleCounter[renamePipelineDS[i].instructionBundle.currentRank].renameCycleCount++;
-            instructionStageCycleCounter[renamePipelineDS[i].instructionBundle.currentRank].registerReadCycleCount = instructionStageCycleCounter[renamePipelineDS[i].instructionBundle.currentRank].renameCycleCount;
+        if(iterator->instructionBundle.validBit == 1) {
+
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].renameCycleCount++;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].registerReadCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].renameCycleCount;
         }
     }
 
@@ -864,14 +860,14 @@ inline void superScalar::Rename() {
 inline void superScalar::Decode() {
 
 
-    for(uint32_t i = 0; i < width; i++) {
-        if(decodePipelineDS[i].instructionBundle.validBit == 1) {
+    for(auto iterator = decodePipelineDS.begin(); iterator != decodePipelineDS.end(); iterator++) {
 
-            instructionStageCycleCounter[decodePipelineDS[i].instructionBundle.currentRank].decodeCycleCount++;
-            instructionStageCycleCounter[decodePipelineDS[i].instructionBundle.currentRank].renameCycleCount = instructionStageCycleCounter[decodePipelineDS[i].instructionBundle.currentRank].decodeCycleCount;
+        if(iterator->instructionBundle.validBit == 1) {
+
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].decodeCycleCount++;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].renameCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].decodeCycleCount;
         }
     }
-
 
     if(checkDE()) {
         for(uint32_t i = 0; i < width; i++) {
