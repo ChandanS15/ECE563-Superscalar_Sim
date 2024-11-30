@@ -527,55 +527,19 @@ inline void superScalar::Issue() {
 
     if(checkIS()) {
 
-        // sorting the instructions in the Issue Queue based on their rank.
-
-        // for(uint32_t i=0; i< iqSize - 1; i++) {
-        //
-        //     for(uint32_t j=i+1;j<iqSize; j++) {
-        //
-        //         if(issueQueueDS[i].instructionBundle.validBit < issueQueueDS[j].instructionBundle.validBit) {
-        //             temp = issueQueueDS[i];
-        //             issueQueueDS[i] = issueQueueDS[j];
-        //             issueQueueDS[j] = temp;
-        //         }
-        //
-        //     }
-        //
-        // }
-        //
-        // for(uint32_t i=0; i< iqSize - 1; i++) {
-        //
-        //     for(uint32_t j=i+1; j<iqSize; j++) {
-        //
-        //         if( (issueQueueDS[i].instructionBundle.validBit == 1) && (issueQueueDS[j].instructionBundle.validBit == 1) &&
-        //             (issueQueueDS[i].instructionBundle.currentRank > issueQueueDS[j].instructionBundle.currentRank) &&
-        //             issueQueueDS[j].instructionBundle.currentRank != -1) {
-        //
-        //             temp = issueQueueDS[i];
-        //             issueQueueDS[i] = issueQueueDS[j];
-        //             issueQueueDS[j] = temp;
-        //             }
-        //     }
-        //
-        // }
-
         for (uint32_t i = 0; i < iqSize - 1; i++) {
             for (uint32_t j = i + 1; j < iqSize; j++) {
+                // First condition: Sort by validBit in descending order
                 if (issueQueueDS[i].instructionBundle.validBit < issueQueueDS[j].instructionBundle.validBit) {
                     std::swap(issueQueueDS[i], issueQueueDS[j]);
                 }
-            }
-        }
-
-        for (uint32_t i = 0; i < iqSize - 1; i++) {
-            for (uint32_t j = i + 1; j < iqSize; j++) {
-                if ((issueQueueDS[i].instructionBundle.validBit == 1) &&
-                    (issueQueueDS[j].instructionBundle.validBit == 1) &&
-                    (issueQueueDS[i].instructionBundle.currentRank > issueQueueDS[j].instructionBundle.currentRank) &&
-                    (issueQueueDS[j].instructionBundle.currentRank != -1)) {
-
+                // Second condition: Sort by currentRank if validBit is 1
+                else if ((issueQueueDS[i].instructionBundle.validBit == 1) &&
+                         (issueQueueDS[j].instructionBundle.validBit == 1) &&
+                         (issueQueueDS[i].instructionBundle.currentRank > issueQueueDS[j].instructionBundle.currentRank) &&
+                         (issueQueueDS[j].instructionBundle.currentRank != -1)) {
                     std::swap(issueQueueDS[i], issueQueueDS[j]);
-                    }
+                         }
             }
         }
 
