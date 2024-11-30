@@ -610,50 +610,53 @@ inline void superScalar::Dispatch() {
     }
 
     if(checkDS()) {
-        for(uint32_t i =0; i < width; i++) {
+        auto dispatchIt = dispatchPipelineDS.begin();
 
-            if(dispatchPipelineDS[i].instructionBundle.validBit == 1) {
+for (; dispatchIt != dispatchPipelineDS.end(); ++dispatchIt) {
+    if (dispatchIt->instructionBundle.validBit == 1) {
+        // Check if sourceRegister1 is ready in the ROB and update if so.
+        if (dispatchIt->sourceRegister1 != -1 &&
+            reorderBuffer[dispatchIt->sourceRegister1].readyBit == 1) {
+            dispatchIt->sourceRegister1 = -1;
+        }
 
-                if(dispatchPipelineDS[i].sourceRegister1 != -1 &&
-                    reorderBuffer[dispatchPipelineDS[i].sourceRegister1].readyBit == 1)
-                    // If the register under observation in the ROB is ready set it to -1 for next cycle usage.
-                    dispatchPipelineDS[i].sourceRegister1 = -1;
+        // Check if sourceRegister2 is ready in the ROB and update if so.
+        if (dispatchIt->sourceRegister2 != -1 &&
+            reorderBuffer[dispatchIt->sourceRegister2].readyBit == 1) {
+            dispatchIt->sourceRegister2 = -1;
+        }
 
-                if(dispatchPipelineDS[i].sourceRegister2 != -1 &&
-                    reorderBuffer[dispatchPipelineDS[i].sourceRegister2].readyBit == 1)
-                    // If the register under observation in the ROB is ready set it to -1 for next cycle usage.
-                    dispatchPipelineDS[i].sourceRegister2 = -1;
+        // Push the instruction bundle to the Issue Queue.
+        auto issueQueueIt = issueQueueDS.begin();
 
-                // Push the instruction bundle to the Issue Queue
-                for(uint32_t j =0; j < iqSize; j++) {
+        for (; issueQueueIt != issueQueueDS.end(); ++issueQueueIt) {
+            if (issueQueueIt->instructionBundle.validBit == 0) {
+                // Found an empty slot in the Issue Queue.
 
-                    // Here keep checking for instruction in issue queue that has to be removed i.e it is sent to execution stage if found
-                    if(issueQueueDS[j].instructionBundle.validBit  == 0) {
-                        // Enter the instruction into the issue queue if
+                // Reset the valid bit in the dispatch stage for the next cycle.
+                dispatchIt->instructionBundle.validBit = 0;
 
-                        // Reset/set the valid bit of the dispatch stage to read next set of WIDTH instructions.
-                        dispatchPipelineDS[i].instructionBundle.validBit = 0;
+                // Populate the issue queue entry with the instruction from the dispatch stage.
+                issueQueueIt->instructionBundle.validBit = 1;
+                issueQueueIt->instructionBundle.destinationRegister = dispatchIt->instructionBundle.destinationRegister;
+                issueQueueIt->instructionBundle.sourceRegister1 = dispatchIt->instructionBundle.sourceRegister1;
+                issueQueueIt->instructionBundle.sourceRegister2 = dispatchIt->instructionBundle.sourceRegister2;
+                issueQueueIt->instructionBundle.programCounter = dispatchIt->instructionBundle.programCounter;
+                issueQueueIt->instructionBundle.operationType = dispatchIt->instructionBundle.operationType;
+                issueQueueIt->instructionBundle.currentRank = dispatchIt->instructionBundle.currentRank;
 
-                        //issueQueueDS[j].validBit = 1;
-                        issueQueueDS[j].instructionBundle.validBit = 1;
-                        issueQueueDS[j].instructionBundle.destinationRegister   = dispatchPipelineDS[i].instructionBundle.destinationRegister;
-                        issueQueueDS[j].instructionBundle.sourceRegister1       = dispatchPipelineDS[i].instructionBundle.sourceRegister1;
-                        issueQueueDS[j].instructionBundle.sourceRegister2       = dispatchPipelineDS[i].instructionBundle.sourceRegister2;
-                        issueQueueDS[j].instructionBundle.programCounter        = dispatchPipelineDS[i].instructionBundle.programCounter;
-                        issueQueueDS[j].instructionBundle.operationType         = dispatchPipelineDS[i].instructionBundle.operationType;
-                        issueQueueDS[j].instructionBundle.currentRank           = dispatchPipelineDS[i].instructionBundle.currentRank;
+                // Copy renamed register values to the issue queue.
+                issueQueueIt->destinationRegister = dispatchIt->destinationRegister;
+                issueQueueIt->sourceRegister1 = dispatchIt->sourceRegister1;
+                issueQueueIt->sourceRegister2 = dispatchIt->sourceRegister2;
 
-                        // Propagate the renamed register values as well.
-                        issueQueueDS[j].destinationRegister = dispatchPipelineDS[i].destinationRegister;
-                        issueQueueDS[j].sourceRegister1 = dispatchPipelineDS[i].sourceRegister1;
-                        issueQueueDS[j].sourceRegister2 = dispatchPipelineDS[i].sourceRegister2;
-
-                        // The issue
-                        break;
-                    }
-                }
+                // Break after pushing the instruction into the Issue Queue.
+                break;
             }
         }
+    }
+}
+
     } return;
 }
 
@@ -671,54 +674,45 @@ inline void superScalar::RegisterRead() {
 
     if(checkRR()) {
 
-        for(uint32_t i =0; i < width; i++) {
-            if(registerReadPipelineDS[i].instructionBundle.validBit == 1) {
+        auto registerReadIt = registerReadPipelineDS.begin();
+auto dispatchIt = dispatchPipelineDS.begin();
 
-                // Check if the instructions in the register Read pipeline registers are valid.
+for (; registerReadIt != registerReadPipelineDS.end() && dispatchIt != dispatchPipelineDS.end(); ++registerReadIt, ++dispatchIt) {
+    if (registerReadIt->instructionBundle.validBit == 1) {
+        // Check if the instructions in the register read pipeline are valid.
 
-
-                if(registerReadPipelineDS[i].sourceRegister1 != -1 &&
-                    reorderBuffer[registerReadPipelineDS[i].sourceRegister1].readyBit == 1) {
-                    // If the register under observation in the ROB is ready set it to -1 for next cycle usage.
-                    registerReadPipelineDS[i].sourceRegister1 = -1;
-
-                    }
-
-                if(registerReadPipelineDS[i].sourceRegister2 != -1 &&
-                    reorderBuffer[registerReadPipelineDS[i].sourceRegister2].readyBit == 1) {
-
-                    // If the register under observation in the ROB is ready set it to -1 for next cycle usage.
-                    registerReadPipelineDS[i].sourceRegister2 = -1;
-
-                    }
-
-
-
-                // Advance the cycle to dispatch stage
-
-                dispatchPipelineDS[i].instructionBundle.validBit                = 1;
-                dispatchPipelineDS[i].instructionBundle.destinationRegister     = registerReadPipelineDS[i].instructionBundle.destinationRegister;
-                dispatchPipelineDS[i].instructionBundle.sourceRegister1         = registerReadPipelineDS[i].instructionBundle.sourceRegister1;
-                dispatchPipelineDS[i].instructionBundle.sourceRegister2         = registerReadPipelineDS[i].instructionBundle.sourceRegister2;
-                dispatchPipelineDS[i].instructionBundle.programCounter          = registerReadPipelineDS[i].instructionBundle.programCounter;
-                dispatchPipelineDS[i].instructionBundle.operationType           = registerReadPipelineDS[i].instructionBundle.operationType;
-
-
-                // Copy the renamed registers to next pipeline Values as well.
-                dispatchPipelineDS[i].destinationRegister                       = registerReadPipelineDS[i].destinationRegister;
-                dispatchPipelineDS[i].sourceRegister1                           = registerReadPipelineDS[i].sourceRegister1;
-                dispatchPipelineDS[i].sourceRegister2                           = registerReadPipelineDS[i].sourceRegister2;
-
-
-                dispatchPipelineDS[i].instructionBundle.currentRank             = registerReadPipelineDS[i].instructionBundle.currentRank;
-
-
-                // Advance cycle for next set of WIDTH instructions.
-                registerReadPipelineDS[i].instructionBundle.validBit = 0;
-
-
-            }
+        // Check readiness of sourceRegister1 and update if ready.
+        if (registerReadIt->sourceRegister1 != -1 &&
+            reorderBuffer[registerReadIt->sourceRegister1].readyBit == 1) {
+            registerReadIt->sourceRegister1 = -1;
         }
+
+        // Check readiness of sourceRegister2 and update if ready.
+        if (registerReadIt->sourceRegister2 != -1 &&
+            reorderBuffer[registerReadIt->sourceRegister2].readyBit == 1) {
+            registerReadIt->sourceRegister2 = -1;
+        }
+
+        // Advance the instruction to the dispatch stage.
+        dispatchIt->instructionBundle.validBit = 1;
+        dispatchIt->instructionBundle.destinationRegister = registerReadIt->instructionBundle.destinationRegister;
+        dispatchIt->instructionBundle.sourceRegister1 = registerReadIt->instructionBundle.sourceRegister1;
+        dispatchIt->instructionBundle.sourceRegister2 = registerReadIt->instructionBundle.sourceRegister2;
+        dispatchIt->instructionBundle.programCounter = registerReadIt->instructionBundle.programCounter;
+        dispatchIt->instructionBundle.operationType = registerReadIt->instructionBundle.operationType;
+
+        // Copy renamed registers to the dispatch pipeline.
+        dispatchIt->destinationRegister = registerReadIt->destinationRegister;
+        dispatchIt->sourceRegister1 = registerReadIt->sourceRegister1;
+        dispatchIt->sourceRegister2 = registerReadIt->sourceRegister2;
+
+        // Copy the rank of the instruction.
+        dispatchIt->instructionBundle.currentRank = registerReadIt->instructionBundle.currentRank;
+
+        // Reset the valid bit for the next cycle.
+        registerReadIt->instructionBundle.validBit = 0;
+    }
+}
 
     }
     return;
@@ -740,117 +734,59 @@ inline void superScalar::Rename() {
     // Check if ROB tailPointer != robSize and  RR pipeline is empty
     if(checkRN()) {
 
-        for(uint32_t i = 0; i < width; i++) {
+         auto renameIt = renamePipelineDS.begin();
+    auto registerReadIt = registerReadPipelineDS.begin();
 
-            // Processing the rename bundle -
-            // 1. Allocate an entry in the ROB for the instruction
-            // 2. Rename its source register i.e now the source registers become the entry index of ROB
-            // 3. If it has a destination register rename it as well.
+    for (; renameIt != renamePipelineDS.end() && registerReadIt != registerReadPipelineDS.end(); ++renameIt, ++registerReadIt) {
+        if (renameIt->instructionBundle.validBit == 1) {
+            // Allocate entry in ROB
+            reorderBuffer[tailPointer].validBit = 1;
+            reorderBuffer[tailPointer].destination = renameIt->instructionBundle.destinationRegister;
+            reorderBuffer[tailPointer].programCounter = renameIt->instructionBundle.programCounter;
+            reorderBuffer[tailPointer].currentRank = renameIt->instructionBundle.currentRank;
+            reorderBuffer[tailPointer].operationType = renameIt->instructionBundle.operationType;
+            reorderBuffer[tailPointer].sourceRegister1 = renameIt->instructionBundle.sourceRegister1;
+            reorderBuffer[tailPointer].sourceRegister2 = renameIt->instructionBundle.sourceRegister2;
+            reorderBuffer[tailPointer].readyBit = 0;
 
-            if(renamePipelineDS[i].instructionBundle.validBit == 1) {
-                // Preliminary check to see the validity of the instruction.
-
-                // Rename Steps -
-                // 1. Allocate free entry at tail of the ROB by replacing the destination specifier with unique identity
-                // of ROB Tag.
-                // 2. Rename the sources by checking the RMT valid state. i.e. if the RMT of the source register specifier is valid in RMT
-                // replace it with the RMT robTag into the pipeline if not there are no inflight instruction producing the register value hence
-                // use ARF.
-                // 3. Update the RMT with current instruction destination identifier which is the robTag being pointed by tailpointer
-                // and increment the tailPointer.
-
-                reorderBuffer[tailPointer].validBit = 1;
-
-                // Step 1 of renaming
-                // Allocate the entry pointed by tail pointer and update the destination register specifier
-                reorderBuffer[tailPointer].destination = renamePipelineDS[i].instructionBundle.destinationRegister;
-                // copy the PC to ROB
-                reorderBuffer[tailPointer].programCounter = renamePipelineDS[i].instructionBundle.programCounter;
-                // copy the index of instr into the ROB
-                // This rank is used to identify the instruction rank between width number of instructions being fetched.
-                reorderBuffer[tailPointer].currentRank = renamePipelineDS[i].instructionBundle.currentRank;
-
-                reorderBuffer[tailPointer].operationType = renamePipelineDS[i].instructionBundle.operationType;
-
-                reorderBuffer[tailPointer].sourceRegister1 = renamePipelineDS[i].instructionBundle.sourceRegister1;
-                reorderBuffer[tailPointer].sourceRegister2 = renamePipelineDS[i].instructionBundle.sourceRegister2;
-                // The current tail pointer value serves as the ROB tag
-                //reorderBuffer[tailPointer].currentIndex = tailPointer;
-                // Reset ready bit as it is not yet executed.
-                reorderBuffer[tailPointer].readyBit = 0;
-
-
-                // // Set the ROB entry to be valid
-                // reorderBuffer[tailPointer].validBit = 1;
-
-                // Now that ROB entry of destination register is done move onto the renaming the source registers.
-
-                // In this stage check if the source register is being used in the current instruction,
-                // If yes then check if it has an entry in RMT (which would servev as the latest version of that register as opposed to the
-                // one in the ARF.
-
-                // If the Valid Bit of RMT is 0 then use the ARF value which is latest.
-                if( (renamePipelineDS[i].instructionBundle.sourceRegister1 != -1) &&
-                    (renameMapTable[renamePipelineDS[i].instructionBundle.sourceRegister1].validBit == 1))
-                    // Because there already exist a latest version of the required register specifier use it by replacing the ROB Tag present in the RMT.
-                        renamePipelineDS[i].sourceRegister1 = renameMapTable[renamePipelineDS[i].instructionBundle.sourceRegister1].robTag;
-
-
-                // If the Valid Bit of RMT is 0 then use the ARF value which is latest.
-                if( (renamePipelineDS[i].instructionBundle.sourceRegister2 != -1) &&
-                    (renameMapTable[renamePipelineDS[i].instructionBundle.sourceRegister2].validBit == 1))
-                    // Because there already exist a latest version of the required register specifier use it by replacing the ROB Tag present in the RMT.
-                    renamePipelineDS[i].sourceRegister2 = renameMapTable[renamePipelineDS[i].instructionBundle.sourceRegister2].robTag;
-
-
-
-                // After renaming the destination and source registers now, update the latest ROB tags in the RMT to reflect these renames.
-
-                // Here setting the current ith instruction destination to the destination register specifier of the ROB entry pointed by the tailPointer.
-                renamePipelineDS[i].destinationRegister = reorderBuffer[tailPointer].currentIndex;
-
-                // If the destination register != -1 i.e not a branch instruction then the renamed sources must also be updated
-                if(renamePipelineDS[i].destinationRegister != -1) {
-                    // After making sure the RMT reflects the renamed changes update the robTag filed and set the validBit.
-                    renameMapTable[renamePipelineDS[i].instructionBundle.destinationRegister].validBit = 1;
-
-                    // The RMT's robtag now has the index which is robtag of ROB entry.
-                    renameMapTable[renamePipelineDS[i].instructionBundle.destinationRegister].robTag = reorderBuffer[tailPointer].currentIndex;
-                }
-
-
-                // After ROB entry increment tail pointer for next cycle updation.
-                tailPointer++;
-
-                // check if ROB is full, as it is a circular buffer restart from the first entry.(oth index)
-                if(tailPointer == robSize)
-                    tailPointer = 0;
-
-
-                // After renaming the instruction bundles and updating RMT , ROB advance the instructions to next stage
-
-
-
-                // Advance the renamed PipelineRegister values into Register read stage.
-                registerReadPipelineDS[i].instructionBundle.validBit = 1;
-
-                registerReadPipelineDS[i].instructionBundle.programCounter      = renamePipelineDS[i].instructionBundle.programCounter;
-                registerReadPipelineDS[i].instructionBundle.destinationRegister = renamePipelineDS[i].instructionBundle.destinationRegister;
-                registerReadPipelineDS[i].instructionBundle.sourceRegister1     = renamePipelineDS[i].instructionBundle.sourceRegister1;
-                registerReadPipelineDS[i].instructionBundle.sourceRegister2     = renamePipelineDS[i].instructionBundle.sourceRegister2;
-                registerReadPipelineDS[i].instructionBundle.currentRank         = renamePipelineDS[i].instructionBundle.currentRank;
-                registerReadPipelineDS[i].instructionBundle.operationType       = renamePipelineDS[i].instructionBundle.operationType;
-                // Copy the renamed source and destination values.
-                registerReadPipelineDS[i].destinationRegister                   = renamePipelineDS[i].destinationRegister;
-                registerReadPipelineDS[i].sourceRegister1                       = renamePipelineDS[i].sourceRegister1;
-                registerReadPipelineDS[i].sourceRegister2                       = renamePipelineDS[i].sourceRegister2;
-
-                // Because of renaming set validBit to 0 so that right after width number of instructions are advanced next set of WIDTH instructions are extracted into fetch and decode.
-                renamePipelineDS[i].instructionBundle.validBit = 0;
-
+            // Rename source registers
+            if (renameIt->instructionBundle.sourceRegister1 != -1 &&
+                renameMapTable[renameIt->instructionBundle.sourceRegister1].validBit == 1) {
+                renameIt->sourceRegister1 = renameMapTable[renameIt->instructionBundle.sourceRegister1].robTag;
             }
 
+            if (renameIt->instructionBundle.sourceRegister2 != -1 &&
+                renameMapTable[renameIt->instructionBundle.sourceRegister2].validBit == 1) {
+                renameIt->sourceRegister2 = renameMapTable[renameIt->instructionBundle.sourceRegister2].robTag;
+            }
+
+            // Rename destination register
+            renameIt->destinationRegister = reorderBuffer[tailPointer].currentIndex;
+
+            if (renameIt->destinationRegister != -1) {
+                renameMapTable[renameIt->instructionBundle.destinationRegister].validBit = 1;
+                renameMapTable[renameIt->instructionBundle.destinationRegister].robTag = reorderBuffer[tailPointer].currentIndex;
+            }
+
+            // Increment tail pointer
+            tailPointer = (tailPointer + 1) % robSize;
+
+            // Advance to the next pipeline stage
+            registerReadIt->instructionBundle.validBit = 1;
+            registerReadIt->instructionBundle.programCounter = renameIt->instructionBundle.programCounter;
+            registerReadIt->instructionBundle.destinationRegister = renameIt->destinationRegister;
+            registerReadIt->instructionBundle.sourceRegister1 = renameIt->sourceRegister1;
+            registerReadIt->instructionBundle.sourceRegister2 = renameIt->sourceRegister2;
+            registerReadIt->instructionBundle.currentRank = renameIt->instructionBundle.currentRank;
+            registerReadIt->instructionBundle.operationType = renameIt->instructionBundle.operationType;
+            registerReadIt->destinationRegister = renameIt->destinationRegister;
+            registerReadIt->sourceRegister1 = renameIt->sourceRegister1;
+            registerReadIt->sourceRegister2 = renameIt->sourceRegister2;
+
+            // Reset valid bit for next cycle
+            renameIt->instructionBundle.validBit = 0;
         }
+    }
     }
     return;
 }
@@ -870,25 +806,22 @@ inline void superScalar::Decode() {
     }
 
     if(checkDE()) {
-        for(uint32_t i = 0; i < width; i++) {
-            if(decodePipelineDS[i].instructionBundle.validBit == 1) {
+        auto decodeIt = decodePipelineDS.begin();
+        auto renameIt = renamePipelineDS.begin();
 
-                // Advance the stage by moving the instruction bundles to next stage.
+        while (decodeIt != decodePipelineDS.end() && renameIt != renamePipelineDS.end()) {
+            if (decodeIt->instructionBundle.validBit == 1) {
+                // Advance the stage by moving the instruction bundles to next stage
+                renameIt->instructionBundle = decodeIt->instructionBundle;
+                decodeIt->instructionBundle.validBit = 0;
 
-                renamePipelineDS[i].instructionBundle.currentRank = decodePipelineDS[i].instructionBundle.currentRank;
-                renamePipelineDS[i].instructionBundle.destinationRegister = decodePipelineDS[i].instructionBundle.destinationRegister;
-                renamePipelineDS[i].instructionBundle.sourceRegister1 = decodePipelineDS[i].instructionBundle.sourceRegister1;
-                renamePipelineDS[i].instructionBundle.sourceRegister2 = decodePipelineDS[i].instructionBundle.sourceRegister2;
-                renamePipelineDS[i].instructionBundle.operationType = decodePipelineDS[i].instructionBundle.operationType;
-                renamePipelineDS[i].instructionBundle.programCounter = decodePipelineDS[i].instructionBundle.programCounter;
-                renamePipelineDS[i].instructionBundle.validBit = decodePipelineDS[i].instructionBundle.validBit;
-
-                decodePipelineDS[i].instructionBundle.validBit = 0;
-
-                renamePipelineDS[i].destinationRegister = -1;
-                renamePipelineDS[i].sourceRegister1 = -1;
-                renamePipelineDS[i].sourceRegister2 = -1;
+                renameIt->destinationRegister = -1;
+                renameIt->sourceRegister1 = -1;
+                renameIt->sourceRegister2 = -1;
             }
+
+            ++decodeIt;
+            ++renameIt;
         }
     }
 
@@ -901,34 +834,27 @@ void superScalar::Fetch() {
     // Check if fetch criteria is met
 
     if(checkFE()) {
-        for(uint32_t i =0; i < width; i++) {
-
-            if( (fscanf(filePointer, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2)) == 5) {
-
+        auto decodeIt = decodePipelineDS.begin();
+        while (decodeIt != decodePipelineDS.end()) {
+            if (fscanf(filePointer, "%lx %d %d %d %d", &pc, &op_type, &dest, &src1, &src2) == 5) {
                 // Set the valid bit of the instruction being advanced to the decode stage
-                decodePipelineDS[i].instructionBundle.validBit = 1;
-                decodePipelineDS[i].instructionBundle.destinationRegister = dest;
-                decodePipelineDS[i].instructionBundle.sourceRegister1 = src1;
-                decodePipelineDS[i].instructionBundle.sourceRegister2 = src2;
-                decodePipelineDS[i].instructionBundle.programCounter = pc;
-                decodePipelineDS[i].instructionBundle.operationType = op_type;
-                // The rank of the instrcution being fetched that is the sequence number in which the instruction enters into the pipeline.
-                decodePipelineDS[i].instructionBundle.currentRank = currentInstructionCount;
+                decodeIt->instructionBundle.validBit = 1;
+                decodeIt->instructionBundle.destinationRegister = dest;
+                decodeIt->instructionBundle.sourceRegister1 = src1;
+                decodeIt->instructionBundle.sourceRegister2 = src2;
+                decodeIt->instructionBundle.programCounter = pc;
+                decodeIt->instructionBundle.operationType = op_type;
+                decodeIt->instructionBundle.currentRank = currentInstructionCount;
 
-                // auto currentInstructionCyclePosition = instructionStageCycleCounter.begin() + 1;
-                //
-                // instructionStageCycleCounter.insert(currentInstructionCyclePosition,{cycleCount,cycleCount,0,0,
-                //     0,0,0,0,0});
-
-
-
-                instructionStageCycleCounter.insert((instructionStageCycleCounter.begin() + currentInstructionCount), {cycleCount,cycleCount,0,0,0,0,0,0,0});
+                // Insert the cycle count into the instructionStageCycleCounter
+                instructionStageCycleCounter.insert(
+                    instructionStageCycleCounter.begin() + currentInstructionCount,
+                    {cycleCount, cycleCount, 0, 0, 0, 0, 0, 0, 0}
+                );
 
                 currentInstructionCount++;
-            } else {
-                advanceCyleEnable = false;
-                return;
             }
+            ++decodeIt;
         }
     }
 }
