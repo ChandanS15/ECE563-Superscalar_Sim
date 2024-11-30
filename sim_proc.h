@@ -417,9 +417,6 @@ inline void superScalar::Writeback() {
 }
 
 
-
-
-
 inline void superScalar::Execute() {
 
 
@@ -537,9 +534,6 @@ inline void superScalar::Issue() {
                          }
             }
         }
-
-
-
 
 
 
