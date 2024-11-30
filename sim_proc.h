@@ -250,7 +250,6 @@ inline int32_t superScalar::Advance_Cycle() {
 
     // cycle count to retire all the instructions that enter the pipeline
     cycleCount++;
-    size_t bytesRead;
 
     if(feof(filePointer)) {
 
