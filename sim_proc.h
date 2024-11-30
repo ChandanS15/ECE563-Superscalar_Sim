@@ -267,9 +267,9 @@ inline int32_t superScalar::Advance_Cycle() {
 
         // check if there are valid instructions in the issue Queue waiting for operations to be performed
         // or to be woken up by producer instructions.
-        for (uint32_t i=0; i< iqSize; i++) {
+        for(auto iterator = issueQueueDS.begin(); iterator != issueQueueDS.end(); iterator++) {
 
-            if(issueQueueDS[i].instructionBundle.validBit == 1)
+            if(iterator->instructionBundle.validBit == 1)
                 return 1;
         }
 
@@ -283,9 +283,9 @@ inline int32_t superScalar::Advance_Cycle() {
 
         // Check if there are entries int he ROB woth speculative versions in the ROB.
 
-        for(uint32_t i=0; i < robSize; i++) {
+        for(auto iterator = reorderBuffer.begin(); iterator != reorderBuffer.end(); iterator++) {
 
-            if(reorderBuffer[i].validBit == 1)
+            if(iterator->validBit == 1)
                 return 1;
         }
         // If none of the above conditions match i.e every instruction fetched from the trace file has been retired, then simulation is done.
