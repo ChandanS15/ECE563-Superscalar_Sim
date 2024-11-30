@@ -56,7 +56,9 @@ typedef struct issueQueue {
     instructionBundleDS instructionBundle;
     int32_t destinationRegister;
     int32_t  sourceRegister1;
+    uint32_t sourceRegister1Ready;
     int32_t  sourceRegister2;
+    uint32_t sourceRegister2Ready;
 
 }issueQueue;
 
@@ -295,12 +297,12 @@ inline int32_t superScalar::Advance_Cycle() {
 
 inline void superScalar::Retire() {
 
-    for(uint32_t i = 0; i < robSize; i++) {
 
-        if(reorderBuffer[i].validBit == 1 && reorderBuffer[i].readyBit == 1) {
+    for(auto iterator = reorderBuffer.begin(); iterator != reorderBuffer.end(); iterator++) {
 
-            instructionStageCycleCounter[reorderBuffer[i].currentRank].retireCycleCount++;
+        if(iterator->validBit == 1 && iterator->readyBit == 1) {
 
+            instructionStageCycleCounter[iterator->currentRank].retireCycleCount++;
         }
     }
 
@@ -358,14 +360,24 @@ inline void superScalar::Retire() {
 
 inline void superScalar::Writeback() {
 
-    for(uint32_t i = 0; i < width * 5; i++) {
+    // for(uint32_t i = 0; i < width * 5; i++) {
+    //
+    //     if(writeBackPipelineDS[i].instructionBundle.validBit == 1) {
+    //
+    //         instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].writeBackCycleCount++;
+    //         instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].retireCycleCount = instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].writeBackCycleCount;
+    //     }
+    // }
 
-        if(writeBackPipelineDS[i].instructionBundle.validBit == 1) {
+    for(auto iterator = writeBackPipelineDS.begin(); iterator != writeBackPipelineDS.end(); iterator++) {
 
-            instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].writeBackCycleCount++;
-            instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].retireCycleCount = instructionStageCycleCounter[writeBackPipelineDS[i].instructionBundle.currentRank].writeBackCycleCount;
+        if(iterator->instructionBundle.validBit == 1) {
+
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].writeBackCycleCount++;
+            instructionStageCycleCounter[iterator->instructionBundle.currentRank].retireCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].writeBackCycleCount;
         }
     }
+
     // In writeback the data bypass has to be maintained i.e.
     // The updates has to be maintained across issue queue, ROB and as a bypass to the execute stage so that the inflight instruction that requires the value can directly
     // have access to the latest value.
