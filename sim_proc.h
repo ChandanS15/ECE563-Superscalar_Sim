@@ -259,11 +259,21 @@ inline int32_t superScalar::Advance_Cycle() {
         // After fetching the last instruction from the trace file
 
         // check if there are valid instructions in the pipeline
-        for(uint32_t i=0; i< width; i++) {
-            if(dispatchPipelineDS[i].instructionBundle.validBit == 1 || renamePipelineDS[i].instructionBundle.validBit == 1 || registerReadPipelineDS[i].instructionBundle.validBit == 1 ||
-                decodePipelineDS[i].instructionBundle.validBit == 1)
+        auto dispatchIt = dispatchPipelineDS.begin();
+                  auto renameIt = renamePipelineDS.begin();
+                  auto registerReadIt = registerReadPipelineDS.begin();
+                  auto decodeIt = decodePipelineDS.begin();
+        for (;   dispatchIt != dispatchPipelineDS.end();
+             ++dispatchIt, ++renameIt, ++registerReadIt, ++decodeIt) {
+
+            if (dispatchIt->instructionBundle.validBit == 1 ||
+                renameIt->instructionBundle.validBit == 1 ||
+                registerReadIt->instructionBundle.validBit == 1 ||
+                decodeIt->instructionBundle.validBit == 1)
                 return 1;
-        }
+
+             }
+
 
         // check if there are valid instructions in the issue Queue waiting for operations to be performed
         // or to be woken up by producer instructions.
@@ -275,11 +285,17 @@ inline int32_t superScalar::Advance_Cycle() {
 
         // check if there are valid instructions in the execution Pipeline waiting for operations to be performed
         // or to be woken up by producer instructions.
+        auto executeIt = executePipelineDS.begin();
+        auto writeBackIt = writeBackPipelineDS.begin();
+        for (;
+             executeIt != executePipelineDS.end() && writeBackIt != writeBackPipelineDS.end();
+             ++executeIt, ++writeBackIt) {
 
-        for(uint32_t i=0; i< width * 5; i++) {
-            if(executePipelineDS[i].instructionBundle.validBit == 1 || writeBackPipelineDS[i].instructionBundle.validBit == 1)
+            if (executeIt->instructionBundle.validBit == 1 || writeBackIt->instructionBundle.validBit == 1)
                 return 1;
-        }
+
+             }
+
 
         // Check if there are entries int he ROB woth speculative versions in the ROB.
 
@@ -373,32 +389,29 @@ inline void superScalar::Writeback() {
     // The updates has to be maintained across issue queue, ROB and as a bypass to the execute stage so that the inflight instruction that requires the value can directly
     // have access to the latest value.
     if(checkWB()) {
-        for(uint32_t i=0; i< width * 5; i++) {
+        for (auto wbIt = writeBackPipelineDS.begin(); wbIt != writeBackPipelineDS.end(); ++wbIt) {
+            if (wbIt->instructionBundle.validBit == 1) {
 
-            if(writeBackPipelineDS[i].instructionBundle.validBit == 1) {
+                // Update the Reorder Buffer (ROB) by setting the ready bit to 1
+                for (auto robIt = reorderBuffer.begin(); robIt != reorderBuffer.end(); ++robIt) {
 
-                // update the ROB wiby setting ready bit to 1
+                    if (robIt->validBit == 1 &&
+                        robIt->currentIndex == wbIt->destinationRegister &&
+                        robIt->readyBit == 0) {
 
-                for(uint32_t j =0; j< robSize; j++) {
+                        if (wbIt->destinationRegister != -1) {
+                            // Set the ready bit in the ROB
+                            robIt->readyBit = 1;
 
-                    if((reorderBuffer[j].validBit == 1) && (reorderBuffer[j].currentIndex == writeBackPipelineDS[i].destinationRegister) && reorderBuffer[j].readyBit == 0) {
-
-                        if(writeBackPipelineDS[i].destinationRegister != -1) {
-                            // at the writeback stage set the ready bit to one so that in the retire stage the instructions can be commited to ARF.
-                            // After setting the ready bit to 1 in ORB reset the valid bit in writePipeline fo r next instruction to be received.
-                            reorderBuffer[j].readyBit = 1;
-                            writeBackPipelineDS[i].instructionBundle.validBit = 0;
-                            break;
-
+                            // Reset the valid bit in the write-back pipeline for the next instruction
+                            wbIt->instructionBundle.validBit = 0;
+                            break; // Exit ROB loop as the matching entry is updated
                         }
-
-
-                    }
-
+                        }
                 }
-
             }
         }
+
     }
     return;
 }
@@ -422,94 +435,74 @@ inline void superScalar::Execute() {
 
 
     if(checkEX()) {
-        for(uint32_t i=0; i< width*5; i++) {
 
-            // At every execute stage decrement the timer i.e. to emulate the cycles are being passed.
+        // Iterate through the execute pipeline
+for (auto execIt = executePipelineDS.begin(); execIt != executePipelineDS.end(); ++execIt) {
 
-            if(executePipelineDS[i].instructionBundle.validBit == 1) {
+    // Decrement the timer for every valid instruction in the execute stage
+    if (execIt->instructionBundle.validBit == 1) {
+        execIt->waitCycles--;
 
-                // This wait cycles simulate the waiting time inside the functional unit depending on the operation type.
-                executePipelineDS[i].waitCycles--;
+        // If the instruction is ready to move to the write-back stage
+        if (execIt->waitCycles == 0) {
 
-                if(executePipelineDS[i].waitCycles == 0) {
-                    // If the current instruction bundles waitCycle is 0 ,
-                    // It is done with execution and has to be sent to the writeback stage.
+            // Resolve dependencies in the issue queue
+            for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
+                if (issueIt->instructionBundle.validBit == 1) {
+                    if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1)
+                        issueIt->sourceRegister1 = -1;
 
-                    for(uint32_t j=0; j< iqSize; j++) {
-
-                        if(issueQueueDS[j].instructionBundle.validBit == 1) {
-
-                            // In the execute stage check for dependency between the instr in previous stage
-
-                            if(issueQueueDS[j].sourceRegister1 != -1 && executePipelineDS[i].destinationRegister == issueQueueDS[j].sourceRegister1)
-                                issueQueueDS[j].sourceRegister1 = -1;
-
-
-                            if(issueQueueDS[j].sourceRegister2 != -1 && executePipelineDS[i].destinationRegister == issueQueueDS[j].sourceRegister2)
-                                issueQueueDS[j].sourceRegister2 = -1;
-
-                        }
-                    }
-
-
-
-                    for(uint32_t j=0; j< width; j++) {
-
-                        // Wake up dependent instructions and set their source operand ready flags in the IQ, DI and RR.
-                        if(dispatchPipelineDS[j].instructionBundle.validBit == 1) {
-
-                            if(dispatchPipelineDS[j].sourceRegister1 != -1 && executePipelineDS[i].destinationRegister == dispatchPipelineDS[j].sourceRegister1)
-                                dispatchPipelineDS[j].sourceRegister1 = -1;
-
-
-                            if(dispatchPipelineDS[j].sourceRegister2 != -1 && executePipelineDS[i].destinationRegister == dispatchPipelineDS[j].sourceRegister2)
-                                dispatchPipelineDS[j].sourceRegister2 = -1;
-
-                        }
-
-                        if(registerReadPipelineDS[j].instructionBundle.validBit == 1) {
-
-                            if(registerReadPipelineDS[j].sourceRegister1 != -1 && executePipelineDS[i].destinationRegister == registerReadPipelineDS[j].sourceRegister1)
-                                registerReadPipelineDS[j].sourceRegister1 = -1;
-
-
-                            if(registerReadPipelineDS[j].sourceRegister2 != -1 && executePipelineDS[i].destinationRegister == registerReadPipelineDS[j].sourceRegister2)
-                                registerReadPipelineDS[j].sourceRegister2 = -1;
-
-                        }
-
-
-                    }
-
-                    for(uint32_t j =0; j <width*5; j++) {
-                        if(writeBackPipelineDS[j].instructionBundle.validBit == 0) {
-
-                            // In the writeBack List if the valid bit is 0, advance the executed instruction to writeback
-
-                            executePipelineDS[i].instructionBundle.validBit = 0;
-
-                            writeBackPipelineDS[j].instructionBundle.validBit = 1;
-                            writeBackPipelineDS[j].instructionBundle.destinationRegister      = executePipelineDS[i].instructionBundle.destinationRegister;
-                            writeBackPipelineDS[j].instructionBundle.sourceRegister1          = executePipelineDS[i].instructionBundle.sourceRegister1;
-                            writeBackPipelineDS[j].instructionBundle.sourceRegister2          = executePipelineDS[i].instructionBundle.sourceRegister2;
-                            writeBackPipelineDS[j].instructionBundle.programCounter           = executePipelineDS[i].instructionBundle.programCounter;
-                            writeBackPipelineDS[j].instructionBundle.currentRank               = executePipelineDS[i].instructionBundle.currentRank;
-                            writeBackPipelineDS[j].instructionBundle.operationType             = executePipelineDS[i].instructionBundle.operationType;
-
-                            writeBackPipelineDS[j].destinationRegister                          = executePipelineDS[i].destinationRegister;
-                            writeBackPipelineDS[j].sourceRegister1                              = executePipelineDS[i].sourceRegister1;
-                            writeBackPipelineDS[j].sourceRegister2                              = executePipelineDS[i].sourceRegister2;
-                            break;
-                        }
-                    }
-
+                    if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2)
+                        issueIt->sourceRegister2 = -1;
                 }
             }
 
+            // Resolve dependencies in the dispatch and register read pipelines
+            for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt) {
+                if (dispIt->instructionBundle.validBit == 1) {
+                    if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
+                        dispIt->sourceRegister1 = -1;
+
+                    if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
+                        dispIt->sourceRegister2 = -1;
+                }
+            }
+
+            for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
+                if (rrIt->instructionBundle.validBit == 1) {
+                    if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
+                        rrIt->sourceRegister1 = -1;
+
+                    if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
+                        rrIt->sourceRegister2 = -1;
+                }
+            }
+
+            // Move the instruction to the write-back pipeline
+            for (auto wbIt = writeBackPipelineDS.begin(); wbIt != writeBackPipelineDS.end(); ++wbIt) {
+                if (wbIt->instructionBundle.validBit == 0) {
+
+                    // Transfer data to write-back pipeline
+                    wbIt->instructionBundle = execIt->instructionBundle;
+                    wbIt->destinationRegister = execIt->destinationRegister;
+                    wbIt->sourceRegister1 = execIt->sourceRegister1;
+                    wbIt->sourceRegister2 = execIt->sourceRegister2;
+
+                    // Mark the execute pipeline entry as invalid
+                    execIt->instructionBundle.validBit = 0;
+                    break;
+                }
+            }
         }
     }
-    return;
 }
+
+
+        }
+    return;
+    }
+
+
 
 inline void superScalar::Issue() {
 
@@ -522,8 +515,6 @@ inline void superScalar::Issue() {
         }
     }
 
-    uint32_t issueCounter = 0;
-
     // In the issue queue I should be issuing upto WIDTH oldest instructions from the issueQuquq.
     // In order to achieve this I will be using the rank that was given to each instruction while fetching from the trace file
 
@@ -531,18 +522,18 @@ inline void superScalar::Issue() {
 
     if(checkIS()) {
 
-        for (uint32_t i = 0; i < iqSize - 1; i++) {
-            for (uint32_t j = i + 1; j < iqSize; j++) {
+        for (auto i = issueQueueDS.begin(); i != issueQueueDS.end() - 1; ++i) {
+            for (auto j = i + 1; j != issueQueueDS.end(); ++j) {
                 // First condition: Sort by validBit in descending order
-                if (issueQueueDS[i].instructionBundle.validBit < issueQueueDS[j].instructionBundle.validBit) {
-                    std::swap(issueQueueDS[i], issueQueueDS[j]);
+                if (i->instructionBundle.validBit < j->instructionBundle.validBit) {
+                    std::swap(*i, *j);
                 }
                 // Second condition: Sort by currentRank if validBit is 1
-                else if ((issueQueueDS[i].instructionBundle.validBit == 1) &&
-                         (issueQueueDS[j].instructionBundle.validBit == 1) &&
-                         (issueQueueDS[i].instructionBundle.currentRank > issueQueueDS[j].instructionBundle.currentRank) &&
-                         (issueQueueDS[j].instructionBundle.currentRank != -1)) {
-                    std::swap(issueQueueDS[i], issueQueueDS[j]);
+                else if ((i->instructionBundle.validBit == 1) &&
+                         (j->instructionBundle.validBit == 1) &&
+                         (i->instructionBundle.currentRank > j->instructionBundle.currentRank) &&
+                         (j->instructionBundle.currentRank != -1)) {
+                    std::swap(*i, *j);
                          }
             }
         }
@@ -552,47 +543,54 @@ inline void superScalar::Issue() {
 
 
 
-        for(uint32_t i=0; i< iqSize; i++) {
+        auto issueIt = issueQueueDS.begin();
+int issueCounter = 0;
 
-            if(issueQueueDS[i].instructionBundle.validBit == 1 && issueQueueDS[i].sourceRegister1 == -1 && issueQueueDS[i].sourceRegister2 == -1) {
-                for(uint32_t j =0; j < width*5; j++) {
+for (; issueIt != issueQueueDS.end(); ++issueIt) {
+    if (issueIt->instructionBundle.validBit == 1 &&
+        issueIt->sourceRegister1 == -1 &&
+        issueIt->sourceRegister2 == -1) {
 
-                    if(executePipelineDS[j].instructionBundle.validBit == 0) {
+        auto executeIt = executePipelineDS.begin();
+        for (; executeIt != executePipelineDS.end(); ++executeIt) {
+            if (executeIt->instructionBundle.validBit == 0) {
+                // Populate the execute pipeline with the instruction
+                executeIt->instructionBundle.validBit = 1;
+                executeIt->instructionBundle.destinationRegister        = issueIt->instructionBundle.destinationRegister;
+                executeIt->instructionBundle.sourceRegister1            = issueIt->instructionBundle.sourceRegister1;
+                executeIt->instructionBundle.sourceRegister2            = issueIt->instructionBundle.sourceRegister2;
+                executeIt->instructionBundle.programCounter             = issueIt->instructionBundle.programCounter;
+                executeIt->instructionBundle.currentRank                = issueIt->instructionBundle.currentRank;
+                executeIt->instructionBundle.operationType = issueIt->instructionBundle.operationType;
 
-                        executePipelineDS[j].instructionBundle.validBit = 1;
-                        executePipelineDS[j].instructionBundle.destinationRegister      = issueQueueDS[i].instructionBundle.destinationRegister;
-                        executePipelineDS[j].instructionBundle.sourceRegister1          = issueQueueDS[i].instructionBundle.sourceRegister1;
-                        executePipelineDS[j].instructionBundle.sourceRegister2          = issueQueueDS[i].instructionBundle.sourceRegister2;
-                        executePipelineDS[j].instructionBundle.programCounter           = issueQueueDS[i].instructionBundle.programCounter;
-                        executePipelineDS[j].instructionBundle.currentRank               = issueQueueDS[i].instructionBundle.currentRank;
-                        executePipelineDS[j].instructionBundle.operationType             = issueQueueDS[i].instructionBundle.operationType;
+                // Propagate renamed register values
+                executeIt->destinationRegister = issueIt->destinationRegister;
+                executeIt->sourceRegister1 = issueIt->sourceRegister1;
+                executeIt->sourceRegister2 = issueIt->sourceRegister2;
 
-                        executePipelineDS[j].destinationRegister                        = issueQueueDS[i].destinationRegister;
-                        executePipelineDS[j].sourceRegister1                            = issueQueueDS[i].sourceRegister1;
-                        executePipelineDS[j].sourceRegister2                            = issueQueueDS[i].sourceRegister2;
+                // Set wait cycles based on operation type
+                if (issueIt->instructionBundle.operationType == 0)
+                    executeIt->waitCycles = 1;
+                else if (issueIt->instructionBundle.operationType == 1)
+                    executeIt->waitCycles = 2;
+                else if (issueIt->instructionBundle.operationType == 2)
+                    executeIt->waitCycles = 5;
 
-                        if(issueQueueDS[i].instructionBundle.operationType == 0)
-                            executePipelineDS[j].waitCycles = 1;
+                // Mark the issue queue entry as invalid
+                issueIt->instructionBundle.validBit = 0;
+                issueIt->instructionBundle.currentRank = -1;
+                ++issueCounter;
 
-                        else if(issueQueueDS[i].instructionBundle.operationType == 1)
-                            executePipelineDS[j].waitCycles = 2;
-
-                        else if(issueQueueDS[i].instructionBundle.operationType == 2)
-                            executePipelineDS[j].waitCycles = 5;
-
-                        issueQueueDS[i].instructionBundle.validBit = 0;
-                        issueQueueDS[i].instructionBundle.currentRank = -1;
-                        issueCounter++;
-                        break;
-                    }
-
-
-                }
-
-                if(issueCounter == width)
-                    return;
+                break; // Move to the next issue queue entry
             }
-        } return;
+        }
+
+        // Stop after issuing the maximum number of instructions for the width
+        if (issueCounter == width)
+            return;
+    }
+}
+return;
     } return;
 }
 
@@ -868,12 +866,11 @@ void superScalar::Fetch() {
 inline uint32_t superScalar::checkRE() {
 
 
-    for(uint32_t i=0; i< robSize; i++) {
-// Atleast 1 rob entry is ready to be retired
-        if(reorderBuffer[i].validBit == 1)
+    for (auto it = reorderBuffer.begin(); it != reorderBuffer.end(); ++it) {
+        if (it->validBit == 1)
             return 1;
-
     }
+
     return 0;
 }
 
@@ -883,23 +880,21 @@ inline uint32_t superScalar::checkRE() {
 inline uint32_t superScalar::checkWB() {
 
 
-    for(uint32_t i=0; i< width*5; i++) {
-
-        if(writeBackPipelineDS[i].instructionBundle.validBit == 1)
+    for (auto it = writeBackPipelineDS.begin(); it != writeBackPipelineDS.end(); ++it) {
+        if (it->instructionBundle.validBit == 1)
             return 1;
-
     }
+
     return 0;
 }
 
 inline uint32_t superScalar::checkEX() {
 
-    for(uint32_t i=0; i< width*5; i++) {
-
-        if(executePipelineDS[i].instructionBundle.validBit == 1)
+    for (auto it = executePipelineDS.begin(); it != executePipelineDS.end(); ++it) {
+        if (it->instructionBundle.validBit == 1)
             return 1;
-
     }
+
     return 0;
 
 
@@ -909,13 +904,12 @@ inline uint32_t superScalar::checkIS() {
 
 
 
-    for(uint32_t i=0; i< iqSize; i++) {
-
-        if(issueQueueDS[i].instructionBundle.validBit == 1)
+    for (auto issueQueueIt = issueQueueDS.begin(); issueQueueIt != issueQueueDS.end(); ++issueQueueIt) {
+        if (issueQueueIt->instructionBundle.validBit == 1) {
             return 1;
-
-
-    }return 0;
+        }
+    }
+    return 0;
 }
 
 
@@ -925,19 +919,20 @@ inline uint32_t superScalar::checkDS() {
     uint32_t dispatchCounter = 0;
     uint32_t issueCounter = 0;
 
-    for (uint32_t i = 0; i < width; i++) {
-
-        if(dispatchPipelineDS[i].instructionBundle.validBit == 1)
+    // Loop over dispatchPipelineDS to count valid entries
+    for (auto dispatchIt = dispatchPipelineDS.begin(); dispatchIt != dispatchPipelineDS.end(); ++dispatchIt) {
+        if (dispatchIt->instructionBundle.validBit == 1) {
             dispatchCounter++;
-
+        }
     }
 
-    // Check for emptiness in the issue queue
-    for(uint32_t j=0; j< iqSize ; j++) {
-        if(issueQueueDS[j].instructionBundle.validBit == 0)
+    // Loop over issueQueueDS to check for empty entries
+    for (auto issueQueueIt = issueQueueDS.begin(); issueQueueIt != issueQueueDS.end(); ++issueQueueIt) {
+        if (issueQueueIt->instructionBundle.validBit == 0) {
             issueCounter++;
-
+        }
     }
+
 
     if(dispatchCounter <= width && dispatchCounter >0) {
 
@@ -960,16 +955,24 @@ inline uint32_t superScalar::checkRR() {
     uint32_t registerReadCounter = 0;
     uint32_t dispatchCounter = 0;
 
-    for( uint32_t i = 0; i < width; i++ ) {
+    //
+    auto registerReadIt = registerReadPipelineDS.begin();
+    auto dispatchIt = dispatchPipelineDS.begin();
+    for (;
+         registerReadIt != registerReadPipelineDS.end() && dispatchIt != dispatchPipelineDS.end();
+         ++registerReadIt, ++dispatchIt) {
 
         // Check if registerRead pipeline registers are full
-        if(registerReadPipelineDS[i].instructionBundle.validBit == 1)
+        if (registerReadIt->instructionBundle.validBit == 1) {
             registerReadCounter += 1;
+        }
 
         // Check if dispatch pipeline registers are empty
-        if(dispatchPipelineDS[i].instructionBundle.validBit == 0)
+        if (dispatchIt->instructionBundle.validBit == 0) {
             dispatchCounter += 1;
-    }
+        }
+         }
+
 
     if(registerReadCounter <= width && registerReadCounter > 0 && dispatchCounter == width)
         return 1;
@@ -996,22 +999,35 @@ inline uint32_t superScalar::checkRN() {
     // 2. Rename its source register i.e now the source registers become the entry index of ROB
     // 3. If it has a destination register rename it as well.
 
-    for(uint32_t i = 0; i < width; i++) {
+    // Loop over the renamePipelineDS and registerReadPipelineDS vectors
 
-        // check if DE contains instruction bundle
-        if(renamePipelineDS[i].instructionBundle.validBit == 1)
+    auto renameIt = renamePipelineDS.begin();
+    auto registerReadIt = registerReadPipelineDS.begin();
+
+    for (;
+         renameIt != renamePipelineDS.end() && registerReadIt != registerReadPipelineDS.end();
+         ++renameIt, ++registerReadIt) {
+
+        // Check if rename stage contains instruction bundle
+        if (renameIt->instructionBundle.validBit == 1) {
             renameCounter += 1;
+        }
 
-        // check if rename stage contain any instruction bundle
-        if(registerReadPipelineDS[i].instructionBundle.validBit == 0)
+        // Check if register read stage contains instruction bundle
+        if (registerReadIt->instructionBundle.validBit == 0) {
             registerReadCounter += 1;
-    }
+        }
+         }
 
-    for(uint32_t i =0; i< robSize; i++) {
+    // Loop over the reorderBuffer
+    for (auto reorderIt = reorderBuffer.begin(); reorderIt != reorderBuffer.end(); ++reorderIt) {
 
-        if(reorderBuffer[i].validBit == 0)
+        // Check if reorderBuffer entry is invalid
+        if (reorderIt->validBit == 0) {
             reorderBufferCounter++;
+        }
     }
+
 
     if(renameCounter <= width && renameCounter > 0 && registerReadCounter == width && reorderBufferCounter >= renameCounter)
         return 1;
@@ -1028,16 +1044,23 @@ inline uint32_t superScalar::checkDE() {
 
     // Check if the decode Pipeline Registers are not empty i.e valid bit is 1
     // and rename is not empty i.e. valid bit is 1 do nothing
-    for(uint32_t i = 0; i < width; i++) {
+    auto decodeIt = decodePipelineDS.begin();
+    auto renameIt = renamePipelineDS.begin();
+    for (;
+     decodeIt != decodePipelineDS.end() && renameIt != renamePipelineDS.end();
+     ++decodeIt, ++renameIt) {
 
-        // check if DE contains instruction bundle
-        if(decodePipelineDS[i].instructionBundle.validBit == 1)
+        // Check if DE contains instruction bundle
+        if (decodeIt->instructionBundle.validBit == 1) {
             decodeCounter += 1;
+        }
 
-        // check if rename stage contain any instruction bundle
-        if(renamePipelineDS[i].instructionBundle.validBit == 0)
+        // Check if rename stage contains any instruction bundle
+        if (renameIt->instructionBundle.validBit == 0) {
             renameCounter += 1;
-    }
+        }
+     }
+
 
     // If the DE pipeline registers are filled and RN is empty doi nothing
     // else if RN is empty then move decode pipeline reg values to RN.
@@ -1055,11 +1078,10 @@ inline uint32_t superScalar::checkFE() {
     uint32_t decodeCounter = 0;
 
     // Check if the decode Pipeline Registers are empty/ invalid
-    for(uint32_t i = 0; i < width; i++) {
-        if(decodePipelineDS[i].instructionBundle.validBit == 0) {
+    for (auto decodeIt = decodePipelineDS.begin(); decodeIt != decodePipelineDS.end(); ++decodeIt) {
+        if (decodeIt->instructionBundle.validBit == 0) {
             decodeCounter += 1;
         }
-
     }
 
     // If the DE pipeline registers are empty and the trace file has traces left return 1,
@@ -1075,127 +1097,117 @@ inline uint32_t superScalar::checkFE() {
 void superScalar::InitialisePipelineDS() {
 
 
-    for(uint32_t i = 0; i < iqSize; i++) {
+    // Initialize issueQueueDS using iterators
+for (auto& issueQueue : issueQueueDS) {
+    issueQueue.instructionBundle.validBit = 0;
+    issueQueue.instructionBundle.programCounter = 0;
+    issueQueue.instructionBundle.destinationRegister = -1;
+    issueQueue.instructionBundle.operationType = -1;
+    issueQueue.instructionBundle.currentRank = -1;
+    issueQueue.instructionBundle.sourceRegister1 = -1;
+    issueQueue.instructionBundle.sourceRegister2 = -1;
 
-        issueQueueDS[i].instructionBundle.validBit = 0;
-        issueQueueDS[i].instructionBundle.validBit = 0;
-        issueQueueDS[i].instructionBundle.programCounter = 0;
-        issueQueueDS[i].instructionBundle.destinationRegister = -1;
-        issueQueueDS[i].instructionBundle.operationType = -1;
-        issueQueueDS[i].instructionBundle.currentRank =-1;
-        issueQueueDS[i].instructionBundle.sourceRegister1 = -1;
-        issueQueueDS[i].instructionBundle.sourceRegister2 = -1;
+    issueQueue.destinationRegister = -1;
+    issueQueue.sourceRegister1 = -1;
+    issueQueue.sourceRegister2 = -1;
+}
 
+// Initialize reorderBuffer using iterators
+for (auto& reorderEntry : reorderBuffer) {
+    reorderEntry.validBit = 0;
+    reorderEntry.destination = -1;
+    reorderEntry.readyBit = 0;
+    reorderEntry.programCounter = 0;
+    reorderEntry.currentIndex = &reorderEntry - &reorderBuffer[0];
 
+    reorderEntry.sourceRegister1 = -1;
+    reorderEntry.sourceRegister2 = -1;
+    reorderEntry.operationType = -1;
+}
 
-        issueQueueDS[i].destinationRegister= -1;
-        issueQueueDS[i].sourceRegister1 = -1;
-        issueQueueDS[i].sourceRegister2 = -1;
+// Initialize renameMapTable using iterators
+for (auto& renameEntry : renameMapTable) {
+    renameEntry.validBit = 0;
+    renameEntry.robTag = -1;
+}
 
-    }
+// Initialize decodePipelineDS, renamePipelineDS, registerReadPipelineDS, and dispatchPipelineDS using iterators
+for (auto& decodeEntry : decodePipelineDS) {
+    decodeEntry.instructionBundle.validBit = 0;
+    decodeEntry.instructionBundle.programCounter = 0;
+    decodeEntry.instructionBundle.destinationRegister = -1;
+    decodeEntry.instructionBundle.operationType = -1;
+    decodeEntry.instructionBundle.currentRank = -1;
+    decodeEntry.instructionBundle.sourceRegister1 = -1;
+    decodeEntry.instructionBundle.sourceRegister2 = -1;
+}
 
-    for(uint32_t i = 0; i < robSize; i++) {
+for (auto& renameEntry : renamePipelineDS) {
+    renameEntry.instructionBundle.validBit = 0;
+    renameEntry.instructionBundle.programCounter = 0;
+    renameEntry.instructionBundle.destinationRegister = -1;
+    renameEntry.instructionBundle.operationType = -1;
+    renameEntry.instructionBundle.currentRank = -1;
+    renameEntry.instructionBundle.sourceRegister1 = -1;
+    renameEntry.instructionBundle.sourceRegister2 = -1;
+    renameEntry.destinationRegister = -1;
+    renameEntry.sourceRegister1 = -1;
+    renameEntry.sourceRegister2 = -1;
+}
 
-        reorderBuffer[i].validBit = 0;
-        reorderBuffer[i].destination = -1;
-        reorderBuffer[i].readyBit = 0;
-        reorderBuffer[i].programCounter = 0;
-        reorderBuffer[i].currentIndex = i;
+for (auto& registerEntry : registerReadPipelineDS) {
+    registerEntry.instructionBundle.validBit = 0;
+    registerEntry.instructionBundle.programCounter = 0;
+    registerEntry.instructionBundle.destinationRegister = -1;
+    registerEntry.instructionBundle.operationType = -1;
+    registerEntry.instructionBundle.currentRank = -1;
+    registerEntry.instructionBundle.sourceRegister1 = -1;
+    registerEntry.instructionBundle.sourceRegister2 = -1;
+    registerEntry.destinationRegister = -1;
+    registerEntry.sourceRegister1 = -1;
+    registerEntry.sourceRegister2 = -1;
+}
 
-        reorderBuffer[i].destination = -1;
-        reorderBuffer[i].sourceRegister1 = -1;
-        reorderBuffer[i].sourceRegister2 = -1;
-        reorderBuffer[i].operationType = -1;
+for (auto& dispatchEntry : dispatchPipelineDS) {
+    dispatchEntry.instructionBundle.validBit = 0;
+    dispatchEntry.instructionBundle.programCounter = 0;
+    dispatchEntry.instructionBundle.destinationRegister = -1;
+    dispatchEntry.instructionBundle.operationType = -1;
+    dispatchEntry.instructionBundle.currentRank = -1;
+    dispatchEntry.instructionBundle.sourceRegister1 = -1;
+    dispatchEntry.instructionBundle.sourceRegister2 = -1;
+    dispatchEntry.destinationRegister = -1;
+    dispatchEntry.sourceRegister1 = -1;
+    dispatchEntry.sourceRegister2 = -1;
+}
 
-    }
+// Initialize executePipelineDS and writeBackPipelineDS using iterators
+for (auto& executeEntry : executePipelineDS) {
+    executeEntry.instructionBundle.validBit = 0;
+    executeEntry.instructionBundle.programCounter = 0;
+    executeEntry.instructionBundle.destinationRegister = -1;
+    executeEntry.instructionBundle.operationType = -1;
+    executeEntry.instructionBundle.currentRank = -1;
+    executeEntry.instructionBundle.sourceRegister1 = -1;
+    executeEntry.instructionBundle.sourceRegister2 = -1;
+    executeEntry.destinationRegister = -1;
+    executeEntry.sourceRegister1 = -1;
+    executeEntry.sourceRegister2 = -1;
+}
 
-    for(uint32_t i = 0; i < NUMBER_OF_REGISTERS; i++) {
+for (auto& writeBackEntry : writeBackPipelineDS) {
+    writeBackEntry.instructionBundle.validBit = 0;
+    writeBackEntry.instructionBundle.programCounter = 0;
+    writeBackEntry.instructionBundle.destinationRegister = -1;
+    writeBackEntry.instructionBundle.operationType = -1;
+    writeBackEntry.instructionBundle.currentRank = -1;
+    writeBackEntry.instructionBundle.sourceRegister1 = -1;
+    writeBackEntry.instructionBundle.sourceRegister2 = -1;
+    writeBackEntry.destinationRegister = -1;
+    writeBackEntry.sourceRegister1 = -1;
+    writeBackEntry.sourceRegister2 = -1;
+}
 
-        renameMapTable[i].validBit = 0;
-        renameMapTable[i].robTag = -1;
-
-
-    }
-
-
-
-
-    for(uint32_t i = 0; i < width; i++) {
-
-        /// Initialise the decode pipeline registers.
-        decodePipelineDS[i].instructionBundle.validBit = 0;
-        decodePipelineDS[i].instructionBundle.programCounter = 0;
-        decodePipelineDS[i].instructionBundle.destinationRegister = -1;
-        decodePipelineDS[i].instructionBundle.operationType = -1;
-        decodePipelineDS[i].instructionBundle.currentRank =-1;
-        decodePipelineDS[i].instructionBundle.sourceRegister1 = -1;
-        decodePipelineDS[i].instructionBundle.sourceRegister2 = -1;
-
-        // Initialise the rename pipeline registers.
-        renamePipelineDS[i].instructionBundle.validBit = 0;
-        renamePipelineDS[i].instructionBundle.programCounter = 0;
-        renamePipelineDS[i].instructionBundle.destinationRegister = -1;
-        renamePipelineDS[i].instructionBundle.operationType = -1;
-        renamePipelineDS[i].instructionBundle.currentRank =-1;
-        renamePipelineDS[i].instructionBundle.sourceRegister1 = -1;
-        renamePipelineDS[i].instructionBundle.sourceRegister2 = -1;
-        renamePipelineDS[i].destinationRegister = -1;
-        renamePipelineDS[i].sourceRegister1 = -1;
-        renamePipelineDS[i].sourceRegister2 = -1;
-
-        // Initialise the register Read pipeline registers.
-        registerReadPipelineDS[i].instructionBundle.validBit = 0;
-        registerReadPipelineDS[i].instructionBundle.programCounter = 0;
-        registerReadPipelineDS[i].instructionBundle.destinationRegister = -1;
-        registerReadPipelineDS[i].instructionBundle.operationType = -1;
-        registerReadPipelineDS[i].instructionBundle.currentRank =-1;
-        registerReadPipelineDS[i].instructionBundle.sourceRegister1 = -1;
-        registerReadPipelineDS[i].instructionBundle.sourceRegister2 = -1;
-        registerReadPipelineDS[i].destinationRegister = -1;
-        registerReadPipelineDS[i].sourceRegister1 = -1;
-        registerReadPipelineDS[i].sourceRegister2 = -1;
-
-        // Initialise the dispatch pipeline registers.
-        dispatchPipelineDS[i].instructionBundle.validBit = 0;
-
-        dispatchPipelineDS[i].instructionBundle.programCounter = 0;
-        dispatchPipelineDS[i].instructionBundle.destinationRegister = -1;
-        dispatchPipelineDS[i].instructionBundle.operationType = -1;
-        dispatchPipelineDS[i].instructionBundle.currentRank =-1;
-        dispatchPipelineDS[i].instructionBundle.sourceRegister1 = -1;
-        dispatchPipelineDS[i].instructionBundle.sourceRegister2 = -1;
-        dispatchPipelineDS[i].destinationRegister = -1;
-        dispatchPipelineDS[i].sourceRegister1 = -1;
-        dispatchPipelineDS[i].sourceRegister2 = -1;
-    }
-
-    for(uint32_t i = 0; i < (width * 5); i++) {
-
-        // Initialise the execute pipeline registers.
-        executePipelineDS[i].instructionBundle.validBit = 0;
-        executePipelineDS[i].instructionBundle.programCounter = 0;
-        executePipelineDS[i].instructionBundle.destinationRegister = -1;
-        executePipelineDS[i].instructionBundle.operationType = -1;
-        executePipelineDS[i].instructionBundle.currentRank =-1;
-        executePipelineDS[i].instructionBundle.sourceRegister1 = -1;
-        executePipelineDS[i].instructionBundle.sourceRegister2 = -1;
-        executePipelineDS[i].destinationRegister = -1;
-        executePipelineDS[i].sourceRegister1 = -1;
-        executePipelineDS[i].sourceRegister2 = -1;
-
-        // Initialise the writeBack pipeline registers.
-        writeBackPipelineDS[i].instructionBundle.validBit = 0;
-        writeBackPipelineDS[i].instructionBundle.programCounter = 0;
-        writeBackPipelineDS[i].instructionBundle.destinationRegister = -1;
-        writeBackPipelineDS[i].instructionBundle.operationType = -1;
-        writeBackPipelineDS[i].instructionBundle.currentRank =-1;
-        writeBackPipelineDS[i].instructionBundle.sourceRegister1 = -1;
-        writeBackPipelineDS[i].instructionBundle.sourceRegister2 = -1;
-        writeBackPipelineDS[i].destinationRegister = -1;
-        writeBackPipelineDS[i].sourceRegister1 = -1;
-        writeBackPipelineDS[i].sourceRegister2 = -1;
-
-    }
 
 
 }
