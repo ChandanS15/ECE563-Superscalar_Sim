@@ -465,16 +465,16 @@ inline void superScalar::Execute() {
                 // If the instruction is ready to move to the write-back stage
                 if (execIt->waitCycles == 0) {
                     // If the current instruction bundles waitCycle is 0 ,
-                    // It is done with execution and has to be sent to the writeback stage.
+                    // It is done with execution and has to be sent to the write back stage.
                     // Resolve dependencies in the issue queue
                     for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
                         if (issueIt->instructionBundle.validBit == 1) {
-                            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1) {
+                            if (execIt->destinationRegister == issueIt->sourceRegister1) {
                                 issueIt->sourceRegister1 = -1;
                                 issueIt->sourceRegister1Ready = true;
                             }
 
-                            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2) {
+                            if (execIt->destinationRegister == issueIt->sourceRegister2) {
                                 issueIt->sourceRegister2 = -1;
                                 issueIt->sourceRegister2Ready = true;
                             }
@@ -482,22 +482,23 @@ inline void superScalar::Execute() {
                     }
 
                     // Resolve dependencies in the dispatch and register read pipelines
-                    for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt) {
+                    auto issueIt = issueQueueDS.begin();
+                    for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt,issueIt++) {
                         if (dispIt->instructionBundle.validBit == 1) {
-                            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
+                            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1 && issueIt->sourceRegister1Ready == true)
                                 dispIt->sourceRegister1 = -1;
 
-                            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
+                            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2 && issueIt->sourceRegister2Ready == true)
                                 dispIt->sourceRegister2 = -1;
                         }
                     }
-
-                    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
+                    auto issueIt2 = issueQueueDS.begin();
+                    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt,issueIt2++) {
                         if (rrIt->instructionBundle.validBit == 1) {
-                            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
+                            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1&& issueIt2->sourceRegister1Ready == true)
                                 rrIt->sourceRegister1 = -1;
 
-                            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
+                            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2&& issueIt2->sourceRegister2Ready == true)
                                 rrIt->sourceRegister2 = -1;
                         }
                     }
@@ -1016,7 +1017,7 @@ inline uint32_t superScalar::checkDS() {
         // if not do nothing
         if(issueCounter < dispatchCounter)
             return 0;
-        else if (issueCounter >= dispatchCounter)
+        else
             return 1;
 
     }
