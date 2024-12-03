@@ -366,17 +366,18 @@ inline void superScalar::Retire() {
 
                 if((renameMapTable[reorderBuffer[headPointer].destination].robTag ==
                     headPointer) && reorderBuffer[headPointer].destination != -1) {
+                    // reset the RMT entry
 
                     renameMapTable[reorderBuffer[headPointer].destination].validBit = 0;
                     renameMapTable[reorderBuffer[headPointer].destination].robTag = -1;
 
                 }
+                // AFter retiring increment the headPointer
 
                 headPointer ++;
                 if(headPointer == robSize)
                     headPointer = 0;
-            } else
-                return;
+            }
         }
     }
 }
@@ -469,11 +470,15 @@ inline void superScalar::Execute() {
                     // Resolve dependencies in the issue queue
                     for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
                         if (issueIt->instructionBundle.validBit == 1) {
-                            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1)
+                            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1) {
                                 issueIt->sourceRegister1 = -1;
+                                issueIt->sourceRegister1Ready = true;
+                            }
 
-                            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2)
+                            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2) {
                                 issueIt->sourceRegister2 = -1;
+                                issueIt->sourceRegister2Ready = true;
+                            }
                         }
                     }
 
@@ -560,51 +565,50 @@ inline void superScalar::Issue() {
         auto issueIt = issueQueueDS.begin();
 int issueCounter = 0;
 
-for (; issueIt != issueQueueDS.end(); ++issueIt) {
-    if (issueIt->instructionBundle.validBit == 1 &&
-        issueIt->sourceRegister1 == -1 &&
-        issueIt->sourceRegister2 == -1) {
+        for (; issueIt != issueQueueDS.end(); ++issueIt) {
+            if (issueIt->instructionBundle.validBit == 1 &&
+                issueIt->sourceRegister1 == -1 &&
+                issueIt->sourceRegister2 == -1) {
 
-        auto executeIt = executePipelineDS.begin();
-        for (; executeIt != executePipelineDS.end(); ++executeIt) {
-            if (executeIt->instructionBundle.validBit == 0) {
-                // Populate the execute pipeline with the instruction
-                executeIt->instructionBundle.validBit = 1;
-                executeIt->instructionBundle.destinationRegister        = issueIt->instructionBundle.destinationRegister;
-                executeIt->instructionBundle.sourceRegister1            = issueIt->instructionBundle.sourceRegister1;
-                executeIt->instructionBundle.sourceRegister2            = issueIt->instructionBundle.sourceRegister2;
-                executeIt->instructionBundle.programCounter             = issueIt->instructionBundle.programCounter;
-                executeIt->instructionBundle.currentRank                = issueIt->instructionBundle.currentRank;
-                executeIt->instructionBundle.operationType = issueIt->instructionBundle.operationType;
+                auto executeIt = executePipelineDS.begin();
+                for (; executeIt != executePipelineDS.end(); ++executeIt) {
+                    if (executeIt->instructionBundle.validBit == 0) {
+                        // Populate the execute pipeline with the instruction
+                        executeIt->instructionBundle.validBit = 1;
+                        executeIt->instructionBundle.destinationRegister        = issueIt->instructionBundle.destinationRegister;
+                        executeIt->instructionBundle.sourceRegister1            = issueIt->instructionBundle.sourceRegister1;
+                        executeIt->instructionBundle.sourceRegister2            = issueIt->instructionBundle.sourceRegister2;
+                        executeIt->instructionBundle.programCounter             = issueIt->instructionBundle.programCounter;
+                        executeIt->instructionBundle.currentRank                = issueIt->instructionBundle.currentRank;
+                        executeIt->instructionBundle.operationType = issueIt->instructionBundle.operationType;
 
-                // Propagate renamed register values
-                executeIt->destinationRegister = issueIt->destinationRegister;
-                executeIt->sourceRegister1 = issueIt->sourceRegister1;
-                executeIt->sourceRegister2 = issueIt->sourceRegister2;
+                        // Propagate renamed register values
+                        executeIt->destinationRegister = issueIt->destinationRegister;
+                        executeIt->sourceRegister1 = issueIt->sourceRegister1;
+                        executeIt->sourceRegister2 = issueIt->sourceRegister2;
 
-                // Set wait cycles based on operation type
-                if (issueIt->instructionBundle.operationType == 0)
-                    executeIt->waitCycles = 1;
-                else if (issueIt->instructionBundle.operationType == 1)
-                    executeIt->waitCycles = 2;
-                else if (issueIt->instructionBundle.operationType == 2)
-                    executeIt->waitCycles = 5;
+                        // Set wait cycles based on operation type
+                        if (issueIt->instructionBundle.operationType == 0)
+                            executeIt->waitCycles = 1;
+                        else if (issueIt->instructionBundle.operationType == 1)
+                            executeIt->waitCycles = 2;
+                        else if (issueIt->instructionBundle.operationType == 2)
+                            executeIt->waitCycles = 5;
 
-                // Mark the issue queue entry as invalid
-                issueIt->instructionBundle.validBit = 0;
-                issueIt->instructionBundle.currentRank = -1;
-                ++issueCounter;
+                        // Mark the issue queue entry as invalid
+                        issueIt->instructionBundle.validBit = 0;
+                        issueIt->instructionBundle.currentRank = -1;
+                        ++issueCounter;
 
-                break; // Move to the next issue queue entry
+                        break; // Move to the next issue queue entry
+                    }
+                }
+
+                // Stop after issuing the maximum number of instructions for the width
+                if (issueCounter == width)
+                    return;
             }
         }
-
-        // Stop after issuing the maximum number of instructions for the width
-        if (issueCounter == width)
-            return;
-    }
-}
-return;
     }
 }
 
