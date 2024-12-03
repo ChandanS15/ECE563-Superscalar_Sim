@@ -192,31 +192,39 @@ public:
 
     void Decode();
     uint32_t checkDE();
+    void DecodeCycleUpdate();
 
     void Rename();
     uint32_t checkRN();
+    void RenameCycleUpdate();
 
     void RegisterRead();
     uint32_t checkRR();
+    void RegisterReadCycleUpdate();
 
 
     void Dispatch();
     uint32_t checkDS();
+    void DispatchCycleUpdate();
 
 
     void Issue();
     uint32_t checkIS();
+    void IssueCycleUpdate();
 
     void Writeback();
     uint32_t checkWB();
+    void WriteBackCycleUpdate();
 
 
     void Retire();
     uint32_t checkRE();
+    void RetireCycleUpdate();
 
 
     void Execute();
     uint32_t checkEX();
+    void ExecuteCycleUpdate();
 
     int32_t Advance_Cycle();
 
@@ -269,9 +277,9 @@ inline int32_t superScalar::Advance_Cycle() {
 
         // check if there are valid instructions in the pipeline
         auto dispatchIt = dispatchPipelineDS.begin();
-                  auto renameIt = renamePipelineDS.begin();
-                  auto registerReadIt = registerReadPipelineDS.begin();
-                  auto decodeIt = decodePipelineDS.begin();
+      auto renameIt = renamePipelineDS.begin();
+      auto registerReadIt = registerReadPipelineDS.begin();
+      auto decodeIt = decodePipelineDS.begin();
         for (;   dispatchIt != dispatchPipelineDS.end();
              ++dispatchIt, ++renameIt, ++registerReadIt, ++decodeIt) {
 
@@ -319,10 +327,7 @@ inline int32_t superScalar::Advance_Cycle() {
 
     return 1;
 }
-
-inline void superScalar::Retire() {
-
-
+inline void superScalar::RetireCycleUpdate() {
     for(auto iterator = reorderBuffer.begin(); iterator != reorderBuffer.end(); iterator++) {
 
         if(iterator->validBit == 1 && iterator->readyBit == 1) {
@@ -330,6 +335,11 @@ inline void superScalar::Retire() {
             instructionStageCycleCounter[iterator->currentRank].retireCycleCount++;
         }
     }
+}
+inline void superScalar::Retire() {
+
+    RetireCycleUpdate();
+
 
     if(checkRE()) {
         // here if the ROB entry pointed by the head is ready/valid
@@ -358,12 +368,11 @@ inline void superScalar::Retire() {
 
                     <<endl;
 
-                    //printf("%d ",reorderBuffer[headPointer].currentRank);
-
                 }
 
                 reorderBuffer[headPointer].validBit = 0;
 
+                // reset the rmt is the headpointer and hthe robtag entry are same.
                 if((renameMapTable[reorderBuffer[headPointer].destination].robTag ==
                     headPointer) && reorderBuffer[headPointer].destination != -1) {
                     // reset the RMT entry
@@ -396,10 +405,7 @@ inline void superScalar::CalculateDuration(uint32_t head) {
 }
 
 
-
-
-inline void superScalar::Writeback() {
-
+inline void superScalar::WriteBackCycleUpdate() {
     for(auto iterator = writeBackPipelineDS.begin(); iterator != writeBackPipelineDS.end(); iterator++) {
 
         if(iterator->instructionBundle.validBit == 1) {
@@ -408,6 +414,12 @@ inline void superScalar::Writeback() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].retireCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].writeBackCycleCount;
         }
     }
+}
+
+inline void superScalar::Writeback() {
+    WriteBackCycleUpdate();
+
+
 
     // In writeback the data bypass has to be maintained i.e.
     // The updates has to be maintained across issue queue, ROB and as a bypass to the execute stage so that the inflight instruction that requires the value can directly
@@ -440,8 +452,7 @@ inline void superScalar::Writeback() {
 }
 
 
-inline void superScalar::Execute() {
-
+inline void superScalar::ExecuteCycleUpdate() {
 
     for(auto iterator = executePipelineDS.begin(); iterator != executePipelineDS.end(); iterator++) {
 
@@ -451,9 +462,10 @@ inline void superScalar::Execute() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].writeBackCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].executeCycleCount;
         }
     }
+}
 
-
-
+inline void superScalar::Execute() {
+    ExecuteCycleUpdate();
     if(checkEX()) {
 
         // Iterate through the execute pipeline
@@ -523,9 +535,7 @@ inline void superScalar::Execute() {
     }
 }
 
-
-
-inline void superScalar::Issue() {
+inline void superScalar::IssueCycleUpdate() {
 
     for(auto iterator = issueQueueDS.begin(); iterator != issueQueueDS.end(); iterator++) {
 
@@ -535,6 +545,11 @@ inline void superScalar::Issue() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].executeCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].issueCycleCount;
         }
     }
+}
+
+inline void superScalar::Issue() {
+
+
 
     // In the issue queue I should be issuing upto WIDTH oldest instructions from the issueQuquq.
     // In order to achieve this I will be using the rank that was given to each instruction while fetching from the trace file
@@ -613,9 +628,7 @@ int issueCounter = 0;
     }
 }
 
-
-inline void superScalar::Dispatch() {
-
+inline void superScalar::DispatchCycleUpdate() {
 
     for(auto iterator = dispatchPipelineDS.begin(); iterator != dispatchPipelineDS.end(); iterator++) {
 
@@ -625,6 +638,12 @@ inline void superScalar::Dispatch() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].issueCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].dispatchCycleCount;
         }
     }
+}
+
+inline void superScalar::Dispatch() {
+    DispatchCycleUpdate();
+
+
 
     if(checkDS()) {
         auto dispatchIt = dispatchPipelineDS.begin();
@@ -677,9 +696,7 @@ for (; dispatchIt != dispatchPipelineDS.end(); ++dispatchIt) {
 
     }
 }
-
-
-inline void superScalar::RegisterRead() {
+inline void superScalar::RegisterReadCycleUpdate() {
 
     for(auto iterator = registerReadPipelineDS.begin(); iterator != registerReadPipelineDS.end(); iterator++) {
 
@@ -689,6 +706,11 @@ inline void superScalar::RegisterRead() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].dispatchCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].registerReadCycleCount;
         }
     }
+}
+
+inline void superScalar::RegisterRead() {
+    RegisterReadCycleUpdate() ;
+
 
     if(checkRR()) {
 
@@ -736,12 +758,8 @@ for (; registerReadIt != registerReadPipelineDS.end() && dispatchIt != dispatchP
 
 
 }
-inline void superScalar::Rename() {
 
-    // Processing the rename bundle -
-    // 1. Allocate an entry in the ROB for the instruction
-    // 2. Rename its source register i.e now the source registers become the entry index of ROB
-    // 3. If it has a destination register rename it as well.
+inline void superScalar::RenameCycleUpdate() {
 
     for(auto iterator = renamePipelineDS.begin(); iterator != renamePipelineDS.end(); iterator++) {
 
@@ -751,6 +769,15 @@ inline void superScalar::Rename() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].registerReadCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].renameCycleCount;
         }
     }
+}
+inline void superScalar::Rename() {
+
+    // Processing the rename bundle -
+    // 1. Allocate an entry in the ROB for the instruction
+    // 2. Rename its source register i.e now the source registers become the entry index of ROB
+    // 3. If it has a destination register rename it as well.
+
+    RenameCycleUpdate();
 
 
 
@@ -866,9 +893,7 @@ inline void superScalar::Rename() {
 }
 
 
-
-inline void superScalar::Decode() {
-
+inline void superScalar::DecodeCycleUpdate() {
 
     for(auto iterator = decodePipelineDS.begin(); iterator != decodePipelineDS.end(); iterator++) {
 
@@ -878,6 +903,10 @@ inline void superScalar::Decode() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].renameCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].decodeCycleCount;
         }
     }
+}
+inline void superScalar::Decode() {
+    DecodeCycleUpdate();
+
 
     if(checkDE()) {
         auto decodeIt = decodePipelineDS.begin();
