@@ -383,14 +383,14 @@ inline void superScalar::Retire() {
 
 inline void superScalar::CalculateDuration(uint32_t head) {
 
-     instructionStageCycleCounter[reorderBuffer[head].currentIndex].decodeDuration =  instructionStageCycleCounter[reorderBuffer[head].currentRank].decodeCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].fetchCycleCount ;
-      instructionStageCycleCounter[reorderBuffer[head].currentIndex].renameDuration =                instructionStageCycleCounter[reorderBuffer[head].currentRank].renameCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].decodeCycleCount;
-      instructionStageCycleCounter[reorderBuffer[head].currentIndex].registerReadDuration =                instructionStageCycleCounter[reorderBuffer[head].currentRank].registerReadCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].renameCycleCount;
-       instructionStageCycleCounter[reorderBuffer[head].currentIndex].dispatchDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].dispatchCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].registerReadCycleCount;
-       instructionStageCycleCounter[reorderBuffer[head].currentIndex].issueDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].issueCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].dispatchCycleCount;
-       instructionStageCycleCounter[reorderBuffer[head].currentIndex].executeDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].executeCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].issueCycleCount;
-       instructionStageCycleCounter[reorderBuffer[head].currentIndex].writeBackDuration =              instructionStageCycleCounter[reorderBuffer[head].currentRank].writeBackCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].executeCycleCount;
-       instructionStageCycleCounter[reorderBuffer[head].currentIndex].retireDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].retireCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].writeBackCycleCount;
+     instructionStageCycleCounter[reorderBuffer[head].currentRank].decodeDuration =  instructionStageCycleCounter[reorderBuffer[head].currentRank].decodeCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].fetchCycleCount ;
+      instructionStageCycleCounter[reorderBuffer[head].currentRank].renameDuration =                instructionStageCycleCounter[reorderBuffer[head].currentRank].renameCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].decodeCycleCount;
+      instructionStageCycleCounter[reorderBuffer[head].currentRank].registerReadDuration =                instructionStageCycleCounter[reorderBuffer[head].currentRank].registerReadCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].renameCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentRank].dispatchDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].dispatchCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].registerReadCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentRank].issueDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].issueCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].dispatchCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentRank].executeDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].executeCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].issueCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentRank].writeBackDuration =              instructionStageCycleCounter[reorderBuffer[head].currentRank].writeBackCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].executeCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentRank].retireDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].retireCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].writeBackCycleCount;
 
 
     
