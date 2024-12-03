@@ -438,7 +438,6 @@ inline void superScalar::Writeback() {
         }
 
     }
-    return;
 }
 
 
@@ -606,7 +605,7 @@ for (; issueIt != issueQueueDS.end(); ++issueIt) {
     }
 }
 return;
-    } return;
+    }
 }
 
 
@@ -670,7 +669,7 @@ for (; dispatchIt != dispatchPipelineDS.end(); ++dispatchIt) {
     }
 }
 
-    } return;
+    }
 }
 
 
@@ -728,7 +727,7 @@ for (; registerReadIt != registerReadPipelineDS.end() && dispatchIt != dispatchP
 }
 
     }
-    return;
+
 
 }
 inline void superScalar::Rename() {
@@ -801,7 +800,7 @@ inline void superScalar::Rename() {
         }
     }
     }
-    return;
+
 }
 
 
@@ -838,7 +837,7 @@ inline void superScalar::Decode() {
         }
     }
 
-    return;
+
 }
 
 
