@@ -465,16 +465,16 @@ inline void superScalar::Execute() {
                 // If the instruction is ready to move to the write-back stage
                 if (execIt->waitCycles == 0) {
                     // If the current instruction bundles waitCycle is 0 ,
-                    // It is done with execution and has to be sent to the write back stage.
+                    // It is done with execution and has to be sent to the writeback stage.
                     // Resolve dependencies in the issue queue
                     for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
                         if (issueIt->instructionBundle.validBit == 1) {
-                            if (execIt->destinationRegister == issueIt->sourceRegister1) {
+                            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1) {
                                 issueIt->sourceRegister1 = -1;
                                 issueIt->sourceRegister1Ready = true;
                             }
 
-                            if (execIt->destinationRegister == issueIt->sourceRegister2) {
+                            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2) {
                                 issueIt->sourceRegister2 = -1;
                                 issueIt->sourceRegister2Ready = true;
                             }
