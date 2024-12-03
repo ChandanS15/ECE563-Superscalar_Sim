@@ -221,6 +221,8 @@ public:
     uint32_t checkRE();
     void RetireCycleUpdate();
 
+    void WakeUpInstruction(std::vector<executePipeline>::iterator execIt);
+
 
     void Execute();
     uint32_t checkEX();
@@ -414,6 +416,8 @@ inline void superScalar::WriteBackCycleUpdate() {
             instructionStageCycleCounter[iterator->instructionBundle.currentRank].retireCycleCount = instructionStageCycleCounter[iterator->instructionBundle.currentRank].writeBackCycleCount;
         }
     }
+
+
 }
 
 inline void superScalar::Writeback() {
@@ -464,6 +468,44 @@ inline void superScalar::ExecuteCycleUpdate() {
     }
 }
 
+inline void superScalar::WakeUpInstruction(std::vector<executePipeline>::iterator execIt) {
+
+    for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
+        if (issueIt->instructionBundle.validBit == 1) {
+            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1) {
+                issueIt->sourceRegister1 = -1;
+                issueIt->sourceRegister1Ready = true;
+            }
+
+            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2) {
+                issueIt->sourceRegister2 = -1;
+                issueIt->sourceRegister2Ready = true;
+            }
+        }
+    }
+
+    for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt) {
+        if (dispIt->instructionBundle.validBit == 1) {
+            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
+                dispIt->sourceRegister1 = -1;
+
+            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
+                dispIt->sourceRegister2 = -1;
+        }
+    }
+
+    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
+        if (rrIt->instructionBundle.validBit == 1) {
+            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
+                rrIt->sourceRegister1 = -1;
+
+            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
+                rrIt->sourceRegister2 = -1;
+        }
+    }
+}
+
+
 inline void superScalar::Execute() {
     ExecuteCycleUpdate();
     if(checkEX()) {
@@ -476,43 +518,11 @@ inline void superScalar::Execute() {
 
                 // If the instruction is ready to move to the write-back stage
                 if (execIt->waitCycles == 0) {
-                    // If the current instruction bundles waitCycle is 0 ,
-                    // It is done with execution and has to be sent to the writeback stage.
-                    // Resolve dependencies in the issue queue
-                    for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
-                        if (issueIt->instructionBundle.validBit == 1) {
-                            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1) {
-                                issueIt->sourceRegister1 = -1;
-                                issueIt->sourceRegister1Ready = true;
-                            }
 
-                            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2) {
-                                issueIt->sourceRegister2 = -1;
-                                issueIt->sourceRegister2Ready = true;
-                            }
-                        }
-                    }
+                    WakeUpInstruction(execIt);
 
                     // Resolve dependencies in the dispatch and register read pipelines
-                    for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt) {
-                        if (dispIt->instructionBundle.validBit == 1) {
-                            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
-                                dispIt->sourceRegister1 = -1;
 
-                            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
-                                dispIt->sourceRegister2 = -1;
-                        }
-                    }
-
-                    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
-                        if (rrIt->instructionBundle.validBit == 1) {
-                            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
-                                rrIt->sourceRegister1 = -1;
-
-                            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
-                                rrIt->sourceRegister2 = -1;
-                        }
-                    }
 
                     // Move the instruction to the write-back pipeline
                     for (auto wbIt = writeBackPipelineDS.begin(); wbIt != writeBackPipelineDS.end(); ++wbIt) {
