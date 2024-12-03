@@ -493,13 +493,13 @@ inline void superScalar::WakeUpInstruction(std::vector<executePipeline>::iterato
                 dispIt->sourceRegister2 = -1;
         }
     }
-
-    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
+    auto issueIt = issueQueueDS.begin();
+    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt, issueIt++) {
         if (rrIt->instructionBundle.validBit == 1) {
-            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
+            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1 && issueIt->sourceRegister1Ready == true)
                 rrIt->sourceRegister1 = -1;
 
-            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
+            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2 && issueIt->sourceRegister2Ready == true)
                 rrIt->sourceRegister2 = -1;
         }
     }
