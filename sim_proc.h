@@ -548,7 +548,7 @@ inline void superScalar::IssueCycleUpdate() {
 }
 
 inline void superScalar::Issue() {
-
+    IssueCycleUpdate();
 
 
     // In the issue queue I should be issuing upto WIDTH oldest instructions from the issueQuquq.
