@@ -22,13 +22,21 @@ typedef struct instructionStageCycleCounterDS {
 
     uint32_t fetchCycleCount;
     uint32_t decodeCycleCount;
+    uint32_t decodeDuration;
     uint32_t renameCycleCount;
+    uint32_t renameDuration;
     uint32_t registerReadCycleCount;
+    uint32_t registerReadDuration;
     uint32_t dispatchCycleCount;
+    uint32_t dispatchDuration;
     uint32_t issueCycleCount;
+    uint32_t issueDuration;
     uint32_t executeCycleCount;
+    uint32_t executeDuration;
     uint32_t writeBackCycleCount;
+    uint32_t writeBackDuration;
     uint32_t retireCycleCount;
+    uint32_t retireDuration;
 
 }instructionStageCycleCounterDS;
 
@@ -212,6 +220,8 @@ public:
 
     int32_t Advance_Cycle();
 
+    void CalculateDuration(uint32_t head);
+
 };
 
 inline void superScalar::superScalarInitialise(int32_t robSize, uint32_t iqSize, uint32_t width, FILE* filePointer) {
@@ -330,20 +340,21 @@ inline void superScalar::Retire() {
         for(uint32_t i=0; i< width; i++) {
             if(reorderBuffer[headPointer].readyBit == 1) {
                 if(reorderBuffer[headPointer].validBit == 1) {
+                    CalculateDuration(headPointer);
 
                     cout<< reorderBuffer[headPointer].currentRank
                     <<" fu{" <<reorderBuffer[headPointer].operationType<<"}"
                     <<" src{" <<reorderBuffer[headPointer].sourceRegister1<< "," <<reorderBuffer[headPointer].sourceRegister2<< "}"
                     <<" dst{" <<reorderBuffer[headPointer].destination<<"}"
                     <<" FE{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].fetchCycleCount<<",1}"
-                    <<" DE{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].fetchCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].decodeCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].fetchCycleCount << "}"
-                    <<" RN{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].decodeCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].renameCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].decodeCycleCount << "}"
-                    <<" RR{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].renameCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].registerReadCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].renameCycleCount << "}"
-                    <<" DI{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].registerReadCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].dispatchCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].registerReadCycleCount << "}"
-                    <<" IS{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].dispatchCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].issueCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].dispatchCycleCount << "}"
-                    <<" EX{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].issueCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].executeCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].issueCycleCount << "}"
-                    <<" WB{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].executeCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].writeBackCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].executeCycleCount << "}"
-                    <<" RT{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].writeBackCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].retireCycleCount -instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].writeBackCycleCount << "}"
+                    <<" DE{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].fetchCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].decodeDuration<< "}"
+                    <<" RN{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].decodeCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].renameDuration << "}"
+                    <<" RR{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].renameCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].registerReadDuration << "}"
+                    <<" DI{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].registerReadCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].dispatchDuration << "}"
+                    <<" IS{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].dispatchCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].issueDuration<< "}"
+                    <<" EX{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].issueCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].executeDuration<< "}"
+                    <<" WB{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].executeCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].writeBackDuration<< "}"
+                    <<" RT{"<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].writeBackCycleCount + 1<<","<< instructionStageCycleCounter[reorderBuffer[headPointer].currentRank].retireDuration<< "}"
 
                     <<endl;
 
@@ -368,8 +379,23 @@ inline void superScalar::Retire() {
                 return;
         }
     }
-    return;
 }
+
+inline void superScalar::CalculateDuration(uint32_t head) {
+
+     instructionStageCycleCounter[reorderBuffer[head].currentIndex].decodeDuration =  instructionStageCycleCounter[reorderBuffer[head].currentRank].decodeCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].fetchCycleCount ;
+      instructionStageCycleCounter[reorderBuffer[head].currentIndex].renameDuration =                instructionStageCycleCounter[reorderBuffer[head].currentRank].renameCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].decodeCycleCount;
+      instructionStageCycleCounter[reorderBuffer[head].currentIndex].registerReadDuration =                instructionStageCycleCounter[reorderBuffer[head].currentRank].registerReadCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].renameCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentIndex].dispatchDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].dispatchCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].registerReadCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentIndex].issueDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].issueCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].dispatchCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentIndex].executeDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].executeCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].issueCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentIndex].writeBackDuration =              instructionStageCycleCounter[reorderBuffer[head].currentRank].writeBackCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].executeCycleCount;
+       instructionStageCycleCounter[reorderBuffer[head].currentIndex].retireDuration =               instructionStageCycleCounter[reorderBuffer[head].currentRank].retireCycleCount -instructionStageCycleCounter[reorderBuffer[head].currentRank].writeBackCycleCount;
+
+
+    
+}
+
 
 
 
@@ -433,70 +459,66 @@ inline void superScalar::Execute() {
     if(checkEX()) {
 
         // Iterate through the execute pipeline
-for (auto execIt = executePipelineDS.begin(); execIt != executePipelineDS.end(); ++execIt) {
+        for (auto execIt = executePipelineDS.begin(); execIt != executePipelineDS.end(); ++execIt) {
+            // Decrement the timer for every valid instruction in the execute stage
+            if (execIt->instructionBundle.validBit == 1) {
+                execIt->waitCycles--;
 
-    // Decrement the timer for every valid instruction in the execute stage
-    if (execIt->instructionBundle.validBit == 1) {
-        execIt->waitCycles--;
+                // If the instruction is ready to move to the write-back stage
+                if (execIt->waitCycles == 0) {
 
-        // If the instruction is ready to move to the write-back stage
-        if (execIt->waitCycles == 0) {
+                    // Resolve dependencies in the issue queue
+                    for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
+                        if (issueIt->instructionBundle.validBit == 1) {
+                            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1)
+                                issueIt->sourceRegister1 = -1;
 
-            // Resolve dependencies in the issue queue
-            for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
-                if (issueIt->instructionBundle.validBit == 1) {
-                    if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1)
-                        issueIt->sourceRegister1 = -1;
+                            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2)
+                                issueIt->sourceRegister2 = -1;
+                        }
+                    }
 
-                    if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2)
-                        issueIt->sourceRegister2 = -1;
-                }
-            }
+                    // Resolve dependencies in the dispatch and register read pipelines
+                    for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt) {
+                        if (dispIt->instructionBundle.validBit == 1) {
+                            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
+                                dispIt->sourceRegister1 = -1;
 
-            // Resolve dependencies in the dispatch and register read pipelines
-            for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt) {
-                if (dispIt->instructionBundle.validBit == 1) {
-                    if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
-                        dispIt->sourceRegister1 = -1;
+                            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
+                                dispIt->sourceRegister2 = -1;
+                        }
+                    }
 
-                    if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
-                        dispIt->sourceRegister2 = -1;
-                }
-            }
+                    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
+                        if (rrIt->instructionBundle.validBit == 1) {
+                            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
+                                rrIt->sourceRegister1 = -1;
 
-            for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
-                if (rrIt->instructionBundle.validBit == 1) {
-                    if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
-                        rrIt->sourceRegister1 = -1;
+                            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
+                                rrIt->sourceRegister2 = -1;
+                        }
+                    }
 
-                    if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
-                        rrIt->sourceRegister2 = -1;
-                }
-            }
+                    // Move the instruction to the write-back pipeline
+                    for (auto wbIt = writeBackPipelineDS.begin(); wbIt != writeBackPipelineDS.end(); ++wbIt) {
+                        if (wbIt->instructionBundle.validBit == 0) {
 
-            // Move the instruction to the write-back pipeline
-            for (auto wbIt = writeBackPipelineDS.begin(); wbIt != writeBackPipelineDS.end(); ++wbIt) {
-                if (wbIt->instructionBundle.validBit == 0) {
+                            // Transfer data to write-back pipeline
+                            wbIt->instructionBundle = execIt->instructionBundle;
+                            wbIt->destinationRegister = execIt->destinationRegister;
+                            wbIt->sourceRegister1 = execIt->sourceRegister1;
+                            wbIt->sourceRegister2 = execIt->sourceRegister2;
 
-                    // Transfer data to write-back pipeline
-                    wbIt->instructionBundle = execIt->instructionBundle;
-                    wbIt->destinationRegister = execIt->destinationRegister;
-                    wbIt->sourceRegister1 = execIt->sourceRegister1;
-                    wbIt->sourceRegister2 = execIt->sourceRegister2;
-
-                    // Mark the execute pipeline entry as invalid
-                    execIt->instructionBundle.validBit = 0;
-                    break;
+                            // Mark the execute pipeline entry as invalid
+                            execIt->instructionBundle.validBit = 0;
+                            break;
+                        }
+                    }
                 }
             }
         }
     }
 }
-
-
-        }
-    return;
-    }
 
 
 
