@@ -482,23 +482,22 @@ inline void superScalar::Execute() {
                     }
 
                     // Resolve dependencies in the dispatch and register read pipelines
-                    auto issueIt = issueQueueDS.begin();
-                    for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt,issueIt++) {
+                    for (auto dispIt = dispatchPipelineDS.begin(); dispIt != dispatchPipelineDS.end(); ++dispIt) {
                         if (dispIt->instructionBundle.validBit == 1) {
-                            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1 && issueIt->sourceRegister1Ready == true)
+                            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
                                 dispIt->sourceRegister1 = -1;
 
-                            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2 && issueIt->sourceRegister2Ready == true)
+                            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
                                 dispIt->sourceRegister2 = -1;
                         }
                     }
-                    auto issueIt2 = issueQueueDS.begin();
-                    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt,issueIt2++) {
+
+                    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt) {
                         if (rrIt->instructionBundle.validBit == 1) {
-                            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1&& issueIt2->sourceRegister1Ready == true)
+                            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1)
                                 rrIt->sourceRegister1 = -1;
 
-                            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2&& issueIt2->sourceRegister2Ready == true)
+                            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2)
                                 rrIt->sourceRegister2 = -1;
                         }
                     }
