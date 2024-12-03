@@ -374,9 +374,7 @@ inline void superScalar::Retire() {
                 }
                 // AFter retiring increment the headPointer
 
-                headPointer ++;
-                if(headPointer == robSize)
-                    headPointer = 0;
+                headPointer = (headPointer + 1) % robSize;
             }
         }
     }
@@ -466,7 +464,8 @@ inline void superScalar::Execute() {
 
                 // If the instruction is ready to move to the write-back stage
                 if (execIt->waitCycles == 0) {
-
+                    // If the current instruction bundles waitCycle is 0 ,
+                    // It is done with execution and has to be sent to the writeback stage.
                     // Resolve dependencies in the issue queue
                     for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
                         if (issueIt->instructionBundle.validBit == 1) {
@@ -543,6 +542,8 @@ inline void superScalar::Issue() {
 
 
     if(checkIS()) {
+
+        // sorting the instructions in the Issue Queue based on their rank.
 
         for (auto i = issueQueueDS.begin(); i != issueQueueDS.end() - 1; ++i) {
             for (auto j = i + 1; j != issueQueueDS.end(); ++j) {
@@ -629,6 +630,7 @@ inline void superScalar::Dispatch() {
         auto dispatchIt = dispatchPipelineDS.begin();
 
 for (; dispatchIt != dispatchPipelineDS.end(); ++dispatchIt) {
+
     if (dispatchIt->instructionBundle.validBit == 1) {
         // Check if sourceRegister1 is ready in the ROB and update if so.
         if (dispatchIt->sourceRegister1 != -1 &&
@@ -736,6 +738,11 @@ for (; registerReadIt != registerReadPipelineDS.end() && dispatchIt != dispatchP
 }
 inline void superScalar::Rename() {
 
+    // Processing the rename bundle -
+    // 1. Allocate an entry in the ROB for the instruction
+    // 2. Rename its source register i.e now the source registers become the entry index of ROB
+    // 3. If it has a destination register rename it as well.
+
     for(auto iterator = renamePipelineDS.begin(); iterator != renamePipelineDS.end(); iterator++) {
 
         if(iterator->instructionBundle.validBit == 1) {
@@ -754,39 +761,85 @@ inline void superScalar::Rename() {
     auto registerReadIt = registerReadPipelineDS.begin();
 
     for (; renameIt != renamePipelineDS.end() && registerReadIt != registerReadPipelineDS.end(); ++renameIt, ++registerReadIt) {
+
         if (renameIt->instructionBundle.validBit == 1) {
-            // Allocate entry in ROB
+            // Preliminary check to see the validity of the instruction.
+
+            // Rename Steps -
+            // 1. Allocate free entry at tail of the ROB by replacing the destination specifier with unique identity
+            // of ROB Tag.
+            // 2. Rename the sources by checking the RMT valid state. i.e. if the RMT of the source register specifier is valid in RMT
+            // replace it with the RMT robTag into the pipeline if not there are no inflight instruction producing the register value hence
+            // use ARF.
+            // 3. Update the RMT with current instruction destination identifier which is the robTag being pointed by tailpointer
+            // and increment the tailPointer.
+
             reorderBuffer[tailPointer].validBit = 1;
+            // Step 1 of renaming
+            // Allocate the entry pointed by tail pointer and update the destination register specifier
             reorderBuffer[tailPointer].destination = renameIt->instructionBundle.destinationRegister;
+            // copy the PC to ROB
             reorderBuffer[tailPointer].programCounter = renameIt->instructionBundle.programCounter;
+            // copy the index of instr into the ROB
+            // This rank is used to identify the instruction rank between width number of instructions being fetched.
             reorderBuffer[tailPointer].currentRank = renameIt->instructionBundle.currentRank;
             reorderBuffer[tailPointer].operationType = renameIt->instructionBundle.operationType;
             reorderBuffer[tailPointer].sourceRegister1 = renameIt->instructionBundle.sourceRegister1;
             reorderBuffer[tailPointer].sourceRegister2 = renameIt->instructionBundle.sourceRegister2;
+            // The current tail pointer value serves as the ROB tag
+            //reorderBuffer[tailPointer].currentIndex = tailPointer;
+            // Reset ready bit as it is not yet executed.
             reorderBuffer[tailPointer].readyBit = 0;
 
             // Rename source registers
+
+            // // Set the ROB entry to be valid
+            // reorderBuffer[tailPointer].validBit = 1;
+
+            // Now that ROB entry of destination register is done move onto the renaming the source registers.
+
+            // In this stage check if the source register is being used in the current instruction,
+            // If yes then check if it has an entry in RMT (which would servev as the latest version of that register as opposed to the
+            // one in the ARF.
+
+            // If the Valid Bit of RMT is 0 then use the ARF value which is latest.
             if (renameIt->instructionBundle.sourceRegister1 != -1 &&
                 renameMapTable[renameIt->instructionBundle.sourceRegister1].validBit == 1) {
+                // Because there already exist a latest version of the required register specifier use it by replacing the ROB Tag present in the RMT.
+
                 renameIt->sourceRegister1 = renameMapTable[renameIt->instructionBundle.sourceRegister1].robTag;
             }
-
+            // If the Valid Bit of RMT is 0 then use the ARF value which is latest.
             if (renameIt->instructionBundle.sourceRegister2 != -1 &&
                 renameMapTable[renameIt->instructionBundle.sourceRegister2].validBit == 1) {
+                // Because there already exist a latest version of the required register specifier use it by replacing the ROB Tag present in the RMT.
+
                 renameIt->sourceRegister2 = renameMapTable[renameIt->instructionBundle.sourceRegister2].robTag;
             }
 
             // Rename destination register
+            // After renaming the destination and source registers now, update the latest ROB tags in the RMT to reflect these renames.
+
+            // Here setting the current ith instruction destination to the destination register specifier of the ROB entry pointed by the tailPointer.
+
             renameIt->destinationRegister = reorderBuffer[tailPointer].currentIndex;
+
+            // If the destination register != -1 i.e not a branch instruction then the renamed sources must also be updated
 
             if (renameIt->destinationRegister != -1) {
                 renameMapTable[renameIt->instructionBundle.destinationRegister].validBit = 1;
                 renameMapTable[renameIt->instructionBundle.destinationRegister].robTag = reorderBuffer[tailPointer].currentIndex;
             }
 
-            // Increment tail pointer
+            // After ROB entry increment tail pointer for next cycle updation.
+            // check if ROB is full, as it is a circular buffer restart from the first entry.(oth index)
             tailPointer = (tailPointer + 1) % robSize;
 
+            // After renaming the instruction bundles and updating RMT , ROB advance the instructions to next stage
+
+
+
+            // Advance the renamed PipelineRegister values into Register read stage.
             // Advance to the next pipeline stage
             registerReadIt->instructionBundle.validBit = 1;
             registerReadIt->instructionBundle.programCounter = renameIt->instructionBundle.programCounter;
@@ -795,9 +848,14 @@ inline void superScalar::Rename() {
             registerReadIt->instructionBundle.sourceRegister2 = renameIt->sourceRegister2;
             registerReadIt->instructionBundle.currentRank = renameIt->instructionBundle.currentRank;
             registerReadIt->instructionBundle.operationType = renameIt->instructionBundle.operationType;
+
+            // Copy the renamed source and destination values.
+
             registerReadIt->destinationRegister = renameIt->destinationRegister;
             registerReadIt->sourceRegister1 = renameIt->sourceRegister1;
             registerReadIt->sourceRegister2 = renameIt->sourceRegister2;
+
+            // Because of renaming set validBit to 0 so that right after width number of instructions are advanced next set of WIDTH instructions are extracted into fetch and decode.
 
             // Reset valid bit for next cycle
             renameIt->instructionBundle.validBit = 0;
