@@ -468,42 +468,7 @@ inline void superScalar::ExecuteCycleUpdate() {
     }
 }
 
-inline void superScalar::WakeUpInstruction(std::vector<executePipeline>::iterator execIt) {
 
-    for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
-        if (issueIt->instructionBundle.validBit == 1) {
-            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1) {
-                issueIt->sourceRegister1 = -1;
-                issueIt->sourceRegister1Ready = true;
-            }
-
-            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2) {
-                issueIt->sourceRegister2 = -1;
-                issueIt->sourceRegister2Ready = true;
-            }
-        }
-    }
-
-
-    auto issueIt = issueQueueDS.begin();
-    auto dispIt = dispatchPipelineDS.begin();
-    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt, issueIt++,  ++dispIt) {
-        if (rrIt->instructionBundle.validBit == 1) {
-            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1 && issueIt->sourceRegister1Ready == true)
-                rrIt->sourceRegister1 = -1;
-
-            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2 && issueIt->sourceRegister2Ready == true)
-                rrIt->sourceRegister2 = -1;
-        }
-        if (dispIt->instructionBundle.validBit == 1) {
-            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
-                dispIt->sourceRegister1 = -1;
-
-            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
-                dispIt->sourceRegister2 = -1;
-        }
-    }
-}
 
 
 inline void superScalar::Execute() {
@@ -1329,7 +1294,42 @@ for (auto& writeBackEntry : writeBackPipelineDS) {
 
 
 
+inline void superScalar::WakeUpInstruction(std::vector<executePipeline>::iterator execIt) {
 
+    for (auto issueIt = issueQueueDS.begin(); issueIt != issueQueueDS.end(); ++issueIt) {
+        if (issueIt->instructionBundle.validBit == 1) {
+            if (issueIt->sourceRegister1 != -1 && execIt->destinationRegister == issueIt->sourceRegister1) {
+                issueIt->sourceRegister1 = -1;
+                issueIt->sourceRegister1Ready = true;
+            }
+
+            if (issueIt->sourceRegister2 != -1 && execIt->destinationRegister == issueIt->sourceRegister2) {
+                issueIt->sourceRegister2 = -1;
+                issueIt->sourceRegister2Ready = true;
+            }
+        }
+    }
+
+
+    auto issueIt = issueQueueDS.begin();
+    auto dispIt = dispatchPipelineDS.begin();
+    for (auto rrIt = registerReadPipelineDS.begin(); rrIt != registerReadPipelineDS.end(); ++rrIt, issueIt++,  ++dispIt) {
+        if (rrIt->instructionBundle.validBit == 1) {
+            if (rrIt->sourceRegister1 != -1 && execIt->destinationRegister == rrIt->sourceRegister1 && issueIt->sourceRegister1Ready == true)
+                rrIt->sourceRegister1 = -1;
+
+            if (rrIt->sourceRegister2 != -1 && execIt->destinationRegister == rrIt->sourceRegister2 && issueIt->sourceRegister2Ready == true)
+                rrIt->sourceRegister2 = -1;
+        }
+        if (dispIt->instructionBundle.validBit == 1) {
+            if (dispIt->sourceRegister1 != -1 && execIt->destinationRegister == dispIt->sourceRegister1)
+                dispIt->sourceRegister1 = -1;
+
+            if (dispIt->sourceRegister2 != -1 && execIt->destinationRegister == dispIt->sourceRegister2)
+                dispIt->sourceRegister2 = -1;
+        }
+    }
+}
 
 
 
